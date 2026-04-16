@@ -1,0 +1,461 @@
+/* ═══════════════════════════════════════════════════════════════
+   ELEVO DESIGN SYSTEM
+   Based on: DESIGN.md — "The Digital Architect"
+   Color: Indigo / Material Design 3 surface system
+   Modes: Light (.html default) + Dark (.dark-mode class)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────
+   PART 1 — STATIC TOKENS (font, radius, shadow, animation)
+   Defined once, no dark mode override needed.
+   ───────────────────────────────────────────────────────────── */
+
+@theme {
+    /* FONTS */
+    --font-body:    var(--font-inter, "Inter"), -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --font-display: var(--font-inter, "Inter"), -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --font-mono:    ui-monospace, "Roboto Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+    /* FONT SIZES */
+    --text-xs:              calc(var(--spacing) * 3);      /* 12px */
+    --text-xs--line-height: calc(var(--spacing) * 4.5);
+
+    --text-sm:              calc(var(--spacing) * 3.5);    /* 14px */
+    --text-sm--line-height: calc(var(--spacing) * 5);
+
+    --text-md:              calc(var(--spacing) * 4);      /* 16px */
+    --text-md--line-height: calc(var(--spacing) * 6);
+
+    --text-lg:              calc(var(--spacing) * 4.5);    /* 18px */
+    --text-lg--line-height: calc(var(--spacing) * 7);
+
+    --text-xl:              calc(var(--spacing) * 5);      /* 20px */
+    --text-xl--line-height: calc(var(--spacing) * 7.5);
+
+    --text-display-xs:              calc(var(--spacing) * 6);    /* 24px */
+    --text-display-xs--line-height: calc(var(--spacing) * 8);
+
+    --text-display-sm:                    calc(var(--spacing) * 7.5);  /* 30px */
+    --text-display-sm--line-height:       calc(var(--spacing) * 9.5);
+    --text-display-sm--letter-spacing:    -0.02em;
+
+    --text-display-md:                    calc(var(--spacing) * 9);    /* 36px */
+    --text-display-md--line-height:       calc(var(--spacing) * 11);
+    --text-display-md--letter-spacing:    -0.02em;
+
+    --text-display-lg:                    calc(var(--spacing) * 12);   /* 48px */
+    --text-display-lg--line-height:       calc(var(--spacing) * 15);
+    --text-display-lg--letter-spacing:    -0.02em;
+
+    /* MAX WIDTH */
+    --max-width-app:       390px;
+    --max-width-container: 1280px;
+
+    /* BREAKPOINTS */
+    --breakpoint-xxs: 320px;
+    --breakpoint-xs:  600px;
+
+    /* ── RADIUS ─────────────────────────────────────────────── */
+    /* Design principle: xl (20px) for cards, 2xl (24px) for hero sections */
+    --radius-none:    0px;
+    --radius-xs:      0.25rem;   /* 4px  */
+    --radius-sm:      0.375rem;  /* 6px  */
+    --radius-DEFAULT: 0.5rem;    /* 8px  */
+    --radius-md:      0.625rem;  /* 10px */
+    --radius-lg:      0.75rem;   /* 12px */
+    --radius-xl:      1.25rem;   /* 20px — primary card radius */
+    --radius-2xl:     1.5rem;    /* 24px — hero/nav radius */
+    --radius-full:    9999px;    /* pill */
+
+    /* ── SHADOWS ─────────────────────────────────────────────
+       Light: white-tinted ambient   Dark: dark-opacity ambient
+       "Ghost border" via box-shadow is defined separately.
+       ──────────────────────────────────────────────────────── */
+    --shadow-xs:  0px 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-sm:  0px 1px 3px rgba(0, 0, 0, 0.07), 0px 1px 2px -1px rgba(0, 0, 0, 0.05);
+    --shadow-md:  0px 4px 6px -1px rgba(0, 0, 0, 0.07), 0px 2px 4px -2px rgba(0, 0, 0, 0.04);
+    --shadow-lg:  0px 12px 16px -4px rgba(0, 0, 0, 0.06), 0px 4px 6px -2px rgba(0, 0, 0, 0.03);
+    --shadow-xl:  0px 20px 24px -4px rgba(0, 0, 0, 0.06), 0px 8px 8px -4px rgba(0, 0, 0, 0.03);
+
+    /* Floating elements (modals, nav bars) — DESIGN.md §4 */
+    --shadow-float-light: 0 8px 32px rgba(79, 70, 229, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+    --shadow-float-dark:  0 12px 24px rgba(0, 0, 0, 0.4),     0 4px 8px  rgba(0, 0, 0, 0.2);
+
+    /* ── ANIMATIONS ────────────────────────────────────────── */
+    --animate-caret-blink: caret-blink 1s infinite;
+    --animate-fade-in:     fade-in 0.15s ease-out;
+    --animate-slide-up:    slide-up 0.2s ease-out;
+
+    @keyframes caret-blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0; }
+    }
+    @keyframes fade-in {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+    }
+    @keyframes slide-up {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* BASE COLORS (always fixed) */
+    --color-transparent: rgb(0 0 0 / 0);
+    --color-white:       #ffffff;
+    --color-black:       #000000;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PART 2 — LIGHT MODE VARIABLES (default)
+   Source: Stitch light + DESIGN.md color philosophy
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+    /* ── SURFACES (tonal layering — no borders needed) ────── */
+    --el-background:               #f8fafc;  /* page root */
+    --el-surface:                  #f8fafc;  /* Level 0 */
+    --el-surface-bright:           #f9fafb;
+    --el-surface-dim:              #dde3ea;
+    --el-surface-container-lowest: #ffffff;  /* Level 1 — pure white card */
+    --el-surface-container-low:    #f1f5f9;  /* Level 2 — section bg */
+    --el-surface-container:        #e8edf2;  /* Level 3 — interactive card */
+    --el-surface-container-high:   #e2e8f0;  /* Level 4 — elevated */
+    --el-surface-container-highest:#dde3ea;  /* Level 5 — highest elevation */
+    --el-surface-variant:          #dbe4e7;
+    --el-inverse-surface:          #0f172a;
+    --el-inverse-on-surface:       #94a3b8;
+
+    /* ── TEXT / ON-SURFACE ────────────────────────────────── */
+    --el-on-surface:               #0f172a;  /* primary text — near-black */
+    --el-on-surface-variant:       #475569;  /* secondary text — slate-600 */
+    --el-on-background:            #0f172a;
+
+    /* ── PRIMARY — Indigo ─────────────────────────────────── */
+    /* DESIGN.md: gradient from primary → primary-dim at 135° */
+    --el-primary:                  #4f46e5;  /* indigo-600 */
+    --el-primary-dim:              #4034d7;  /* slightly darker for gradient end */
+    --el-on-primary:               #ffffff;
+    --el-primary-container:        #e0e7ff;  /* indigo-100 — subtle bg */
+    --el-on-primary-container:     #3730a3;  /* indigo-800 */
+    --el-primary-fixed:            #e0e7ff;
+    --el-primary-fixed-dim:        #c7d2fe;  /* indigo-200 */
+    --el-on-primary-fixed:         #312e81;  /* indigo-900 */
+    --el-on-primary-fixed-variant: #4f46e5;
+    --el-inverse-primary:          #818cf8;  /* indigo-400 — for dark bg contexts */
+    --el-surface-tint:             #4f46e5;
+
+    /* ── SECONDARY — Slate ────────────────────────────────── */
+    --el-secondary:                #64748b;  /* slate-500 */
+    --el-secondary-dim:            #475569;  /* slate-600 */
+    --el-on-secondary:             #f8fafc;
+    --el-secondary-container:      #e2e8f0;
+    --el-on-secondary-container:   #1e293b;
+    --el-secondary-fixed:          #e2e8f0;
+    --el-secondary-fixed-dim:      #cbd5e1;
+    --el-on-secondary-fixed:       #1e293b;
+    --el-on-secondary-fixed-variant: #475569;
+
+    /* ── TERTIARY — Blue-Slate ────────────────────────────── */
+    --el-tertiary:                 #5b6b8a;
+    --el-tertiary-dim:             #4a5a78;
+    --el-on-tertiary:              #f8fafc;
+    --el-tertiary-container:       #d2dcf0;
+    --el-on-tertiary-container:    #1e2d4a;
+    --el-tertiary-fixed:           #d2dcf0;
+    --el-tertiary-fixed-dim:       #b8c7e0;
+    --el-on-tertiary-fixed:        #1e2d4a;
+    --el-on-tertiary-fixed-variant:#4a5a78;
+
+    /* ── OUTLINE / BORDERS ────────────────────────────────── */
+    /* DESIGN.md "No-Line Rule": use tonal shifts, not borders. */
+    /* outline-variant = ghost border (15% opacity in use) */
+    --el-outline:                  #94a3b8;  /* slate-400 — medium */
+    --el-outline-variant:          #cbd5e1;  /* slate-200 — subtle */
+
+    /* ── ERROR ────────────────────────────────────────────── */
+    --el-error:                    #ef4444;  /* red-500 */
+    --el-error-dim:                #b91c1c;  /* red-700 */
+    --el-on-error:                 #ffffff;
+    --el-error-container:          #fee2e2;  /* red-100 */
+    --el-on-error-container:       #991b1b;  /* red-800 */
+
+    /* ── GLASS / GLOW (DESIGN.md §2) ─────────────────────── */
+    /* High opacity so dot grid doesn't bleed through */
+    --el-glass-bg:                 rgba(248, 250, 252, 0.92);
+    --el-glass-border:             rgba(255, 255, 255, 0.60);
+    --el-glass-blur:               16px;
+    --el-glow-primary:             rgba(79, 70, 229, 0.15);  /* indigo glow */
+
+    /* ── CARD BACKGROUNDS ────────────────────────────────── */
+    --el-card-bg:                  #ffffff;
+    --el-card-bg-hover:            #f8fafc;
+
+    /* ── SHADOWS (mode-specific) ──────────────────────────── */
+    --el-shadow-ambient:           0 8px 32px rgba(79, 70, 229, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+    --el-shadow-card:              0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.07), 0 12px 24px rgba(0,0,0,0.05);
+    --el-shadow-modal:             0 24px 48px rgba(0, 0, 0, 0.10), 0 8px 16px rgba(0, 0, 0, 0.06);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PART 3 — DARK MODE OVERRIDES
+   Activated by .dark-mode on <html> (see globals.css)
+   ───────────────────────────────────────────────────────────── */
+
+.dark-mode {
+    /* ── SURFACES ─────────────────────────────────────────── */
+    --el-background:               #09090b;
+    --el-surface:                  #09090b;  /* Level 0 — deepest */
+    --el-surface-bright:           #1f1f1f;
+    --el-surface-dim:              #09090b;
+    --el-surface-container-lowest: #121212;  /* Level 1 */
+    --el-surface-container-low:    #1a1a1a;  /* Level 2 */
+    --el-surface-container:        #1c1c1e;  /* Level 3 */
+    --el-surface-container-high:   #262626;  /* Level 4 */
+    --el-surface-container-highest:#27272a;  /* Level 5 */
+    --el-surface-variant:          #262626;
+    --el-inverse-surface:          #f4f4f5;
+    --el-inverse-on-surface:       #09090b;
+
+    /* ── TEXT / ON-SURFACE ────────────────────────────────── */
+    --el-on-surface:               #fafafa;
+    --el-on-surface-variant:       #a1a1aa;  /* zinc-400 */
+    --el-on-background:            #fafafa;
+
+    /* ── PRIMARY — Indigo (lighter for dark bg) ───────────── */
+    --el-primary:                  #6366f1;  /* indigo-500 */
+    --el-primary-dim:              #4f46e5;  /* indigo-600 */
+    --el-on-primary:               #ffffff;
+    --el-primary-container:        #1e1b4b;  /* indigo-950 */
+    --el-on-primary-container:     #e0e7ff;  /* indigo-100 */
+    --el-primary-fixed:            #312e81;
+    --el-primary-fixed-dim:        #3730a3;
+    --el-on-primary-fixed:         #e0e7ff;
+    --el-on-primary-fixed-variant: #818cf8;
+    --el-inverse-primary:          #4f46e5;
+    --el-surface-tint:             #6366f1;
+
+    /* ── SECONDARY — Zinc ─────────────────────────────────── */
+    --el-secondary:                #a1a1aa;  /* zinc-400 */
+    --el-secondary-dim:            #71717a;  /* zinc-500 */
+    --el-on-secondary:             #f4f4f5;
+    --el-secondary-container:      #27272a;
+    --el-on-secondary-container:   #f4f4f5;
+    --el-secondary-fixed:          #27272a;
+    --el-secondary-fixed-dim:      #3f3f46;
+    --el-on-secondary-fixed:       #f4f4f5;
+    --el-on-secondary-fixed-variant: #a1a1aa;
+
+    /* ── TERTIARY ─────────────────────────────────────────── */
+    --el-tertiary:                 #a1a1aa;
+    --el-tertiary-dim:             #71717a;
+    --el-on-tertiary:              #f4f4f5;
+    --el-tertiary-container:       #27272a;
+    --el-on-tertiary-container:    #f4f4f5;
+    --el-tertiary-fixed:           #27272a;
+    --el-tertiary-fixed-dim:       #3f3f46;
+    --el-on-tertiary-fixed:        #f4f4f5;
+    --el-on-tertiary-fixed-variant: #a1a1aa;
+
+    /* ── OUTLINE / BORDERS ────────────────────────────────── */
+    --el-outline:                  #3f3f46;  /* zinc-700 */
+    --el-outline-variant:          rgba(255, 255, 255, 0.06);  /* ultra-subtle */
+
+    /* ── ERROR ────────────────────────────────────────────── */
+    --el-error:                    #f87171;  /* red-400 */
+    --el-error-dim:                #ef4444;  /* red-500 */
+    --el-on-error:                 #f4f4f5;
+    --el-error-container:          #7f1d1d;  /* red-900 */
+    --el-on-error-container:       #fecaca;  /* red-200 */
+
+    /* ── GLASS / GLOW ─────────────────────────────────────── */
+    /* High opacity: dot grid visible but content stays crisp */
+    --el-glass-bg:                 rgba(18, 18, 18, 0.88);
+    --el-glass-border:             rgba(255, 255, 255, 0.07);
+    --el-glass-blur:               24px;
+    --el-glow-primary:             rgba(99, 102, 241, 0.30);
+
+    /* ── CARD BACKGROUNDS ────────────────────────────────── */
+    --el-card-bg:                  #1a1a1a;
+    --el-card-bg-hover:            #212121;
+
+    /* ── SHADOWS (DESIGN.md §4 dark mode) ────────────────── */
+    --el-shadow-ambient:           0 12px 24px rgba(0, 0, 0, 0.40), 0 4px 8px rgba(0, 0, 0, 0.20);
+    --el-shadow-card:              0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.25), 0 12px 32px rgba(0,0,0,0.2);
+    --el-shadow-modal:             0 24px 48px rgba(0, 0, 0, 0.60), 0 8px 16px rgba(0, 0, 0, 0.40);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PART 4 — TAILWIND INLINE THEME MAPPING
+   Maps CSS variables → Tailwind utility classes.
+   bg-surface, text-on-surface, border-outline etc.
+   ───────────────────────────────────────────────────────────── */
+
+@theme inline {
+    /* SURFACES */
+    --color-background:               var(--el-background);
+    --color-surface:                  var(--el-surface);
+    --color-surface-bright:           var(--el-surface-bright);
+    --color-surface-dim:              var(--el-surface-dim);
+    --color-surface-container-lowest: var(--el-surface-container-lowest);
+    --color-surface-container-low:    var(--el-surface-container-low);
+    --color-surface-container:        var(--el-surface-container);
+    --color-surface-container-high:   var(--el-surface-container-high);
+    --color-surface-container-highest:var(--el-surface-container-highest);
+    --color-surface-variant:          var(--el-surface-variant);
+    --color-inverse-surface:          var(--el-inverse-surface);
+    --color-inverse-on-surface:       var(--el-inverse-on-surface);
+
+    /* TEXT */
+    --color-on-surface:               var(--el-on-surface);
+    --color-on-surface-variant:       var(--el-on-surface-variant);
+    --color-on-background:            var(--el-on-background);
+
+    /* PRIMARY */
+    --color-primary:                  var(--el-primary);
+    --color-primary-dim:              var(--el-primary-dim);
+    --color-on-primary:               var(--el-on-primary);
+    --color-primary-container:        var(--el-primary-container);
+    --color-on-primary-container:     var(--el-on-primary-container);
+    --color-primary-fixed:            var(--el-primary-fixed);
+    --color-primary-fixed-dim:        var(--el-primary-fixed-dim);
+    --color-on-primary-fixed:         var(--el-on-primary-fixed);
+    --color-on-primary-fixed-variant: var(--el-on-primary-fixed-variant);
+    --color-inverse-primary:          var(--el-inverse-primary);
+    --color-surface-tint:             var(--el-surface-tint);
+
+    /* SECONDARY */
+    --color-secondary:                var(--el-secondary);
+    --color-secondary-dim:            var(--el-secondary-dim);
+    --color-on-secondary:             var(--el-on-secondary);
+    --color-secondary-container:      var(--el-secondary-container);
+    --color-on-secondary-container:   var(--el-on-secondary-container);
+    --color-secondary-fixed:          var(--el-secondary-fixed);
+    --color-secondary-fixed-dim:      var(--el-secondary-fixed-dim);
+    --color-on-secondary-fixed:       var(--el-on-secondary-fixed);
+    --color-on-secondary-fixed-variant: var(--el-on-secondary-fixed-variant);
+
+    /* TERTIARY */
+    --color-tertiary:                 var(--el-tertiary);
+    --color-tertiary-dim:             var(--el-tertiary-dim);
+    --color-on-tertiary:              var(--el-on-tertiary);
+    --color-tertiary-container:       var(--el-tertiary-container);
+    --color-on-tertiary-container:    var(--el-on-tertiary-container);
+    --color-tertiary-fixed:           var(--el-tertiary-fixed);
+    --color-tertiary-fixed-dim:       var(--el-tertiary-fixed-dim);
+    --color-on-tertiary-fixed:        var(--el-on-tertiary-fixed);
+    --color-on-tertiary-fixed-variant: var(--el-on-tertiary-fixed-variant);
+
+    /* OUTLINE */
+    --color-outline:                  var(--el-outline);
+    --color-outline-variant:          var(--el-outline-variant);
+
+    /* ERROR */
+    --color-error:                    var(--el-error);
+    --color-error-dim:                var(--el-error-dim);
+    --color-on-error:                 var(--el-on-error);
+    --color-error-container:          var(--el-error-container);
+    --color-on-error-container:       var(--el-on-error-container);
+
+    /* SHADOW ALIASES */
+    --shadow-ambient:                 var(--el-shadow-ambient);
+    --shadow-card:                    var(--el-shadow-card);
+    --shadow-modal:                   var(--el-shadow-modal);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PART 5 — COMPONENT UTILITIES
+   Reusable patterns from DESIGN.md.
+   ───────────────────────────────────────────────────────────── */
+
+@layer utilities {
+    /* Gradient border glow — subtle indigo border using mask */
+    .elevo-border-glow {
+        position: relative;
+        isolation: isolate;
+    }
+    .elevo-border-glow::after {
+        content: '';
+        position: absolute;
+        inset: -1px;
+        border-radius: inherit;
+        padding: 1px;
+        background: linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--el-primary) 30%, transparent) 0%,
+            transparent 40%,
+            transparent 60%,
+            color-mix(in srgb, var(--el-primary) 10%, transparent) 100%
+        );
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        pointer-events: none;
+        z-index: -1;
+    }
+
+    /* Glass card — floating elements (DESIGN.md §2) */
+    .elevo-glass {
+        background: var(--el-glass-bg);
+        backdrop-filter: blur(var(--el-glass-blur));
+        -webkit-backdrop-filter: blur(var(--el-glass-blur));
+        border: 1px solid var(--el-glass-border);
+    }
+
+    /* Card — solid background, clearly separated from dot-grid */
+    .elevo-card {
+        background: var(--el-card-bg);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--el-shadow-card);
+    }
+
+    /* Card hover — solid, never transparent */
+    .elevo-card-hover {
+        background: var(--el-card-bg);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--el-shadow-card);
+        transition: transform 150ms ease;
+    }
+    .elevo-card-hover:hover {
+        background: var(--el-card-bg-hover);
+    }
+    .elevo-card-hover:active {
+        transform: scale(0.97);
+    }
+
+    /* Ghost border — accessibility only, barely visible (DESIGN.md §4) */
+    .elevo-ghost-border {
+        border: 1px solid color-mix(in srgb, var(--el-outline-variant) 15%, transparent);
+    }
+
+    /* Primary gradient button (DESIGN.md §5 Buttons) */
+    .elevo-btn-primary {
+        background: linear-gradient(135deg, var(--el-primary), var(--el-primary-dim));
+        color: var(--el-on-primary);
+        border-radius: var(--radius-lg);
+    }
+
+    /* Indigo glow — drop shadow for primary icons/rings (DESIGN.md §4) */
+    .elevo-glow {
+        filter: drop-shadow(0 0 10px var(--el-glow-primary));
+    }
+
+    /* Ambient shadow — for elevated/floating cards */
+    .elevo-shadow-ambient {
+        box-shadow: var(--el-shadow-ambient);
+    }
+
+    /* Mesh gradient background — hero sections (dark mode only) */
+    .elevo-mesh {
+        background-color: var(--el-surface);
+        background-image:
+            radial-gradient(at 0% 0%,   color-mix(in srgb, var(--el-primary) 15%, transparent) 0, transparent 50%),
+            radial-gradient(at 100% 0%, color-mix(in srgb, var(--el-primary) 10%, transparent) 0, transparent 50%);
+    }
+
+    /* Subtle dot grid — background texture */
+    .elevo-dot-grid {
+        background-image: radial-gradient(var(--el-outline-variant) 1px, transparent 1px);
+        background-size: 24px 24px;
+    }
+}
