@@ -491,7 +491,7 @@
 }
 
 .page-enter {
-    animation: page-enter 210ms ease-out both;
+    animation: page-enter 150ms ease-out both;
 }
 
 /* Header/Nav locked during any view transition (safety net) */
