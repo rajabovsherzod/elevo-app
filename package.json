@@ -5,15 +5,19 @@
     "scripts": {
         "dev": "next dev --turbopack",
         "build": "next build",
-        "start": "next start"
+        "start": "next start",
+        "tunnel": "bash tunnel.sh"
     },
     "dependencies": {
         "@tailwindcss/postcss": "^4.2.2",
         "@tailwindcss/typography": "^0.5.19",
+        "@tanstack/react-query": "^5.99.0",
         "@untitledui/file-icons": "^0.0.9",
         "@untitledui/icons": "^0.0.22",
         "@wavesurfer/react": "^1.0.12",
+        "axios": "^1.15.0",
         "embla-carousel-react": "^8.6.0",
+        "framer-motion": "^12.38.0",
         "input-otp": "^1.4.2",
         "lucide-react": "^1.8.0",
         "motion": "^12.38.0",
@@ -30,7 +34,9 @@
         "tailwindcss": "^4.2.2",
         "tailwindcss-animate": "^1.0.7",
         "tailwindcss-react-aria-components": "^2.0.1",
-        "wavesurfer.js": "^7.12.6"
+        "wavesurfer.js": "^7.12.6",
+        "zod": "^4.3.6",
+        "zustand": "^5.0.12"
     },
     "devDependencies": {
         "@trivago/prettier-plugin-sort-imports": "^6.0.2",

@@ -47,7 +47,7 @@ function CircularRing({ progress, level }: { progress: number; level: string }) 
 
 function StatChip({ label, value, highlight }: StatChipProps) {
   return (
-    <div className="flex items-center justify-between px-3.5 py-2.5 bg-surface-container-low rounded-xl">
+    <div className="flex items-center justify-between px-3.5 py-2.5 bg-surface-container-low rounded-xl border border-[color-mix(in_srgb,currentColor_8%,transparent)]">
       <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
         {label}
       </span>
@@ -60,7 +60,7 @@ function StatChip({ label, value, highlight }: StatChipProps) {
 
 export function ProgressCard({ level, progress, questionsAnswered, accuracy, studyTime }: ProgressCardProps) {
   return (
-    <section className="elevo-card elevo-border-glow p-6">
+    <section className="elevo-card elevo-card-border elevo-border-glow p-6">
       <div className="flex items-center gap-6">
         <CircularRing progress={progress} level={level} />
         <div className="flex-1 flex flex-col gap-2.5 min-w-0">

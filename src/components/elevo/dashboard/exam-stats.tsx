@@ -21,7 +21,7 @@ interface ExamStatsProps {
 
 function SkillStat({ icon: Icon, label, score }: SkillStatProps) {
   return (
-    <div className="elevo-card p-5 flex flex-col items-center justify-center text-center select-none">
+    <div className="elevo-card elevo-card-border p-5 flex flex-col items-center justify-center text-center select-none">
       <div className="w-10 h-10 bg-primary/10 border border-primary/15 rounded-xl flex items-center justify-center mb-3">
         <Icon className="w-5 h-5 text-primary" aria-hidden />
       </div>

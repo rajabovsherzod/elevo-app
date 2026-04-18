@@ -39,7 +39,7 @@ export function WelcomeCard({ name, level, streak, xp }: WelcomeCardProps) {
   ]
 
   return (
-    <section className="relative overflow-hidden elevo-card elevo-border-glow elevo-mesh p-6">
+    <section className="relative overflow-hidden elevo-card elevo-card-border elevo-border-glow elevo-mesh p-6">
       {/* Decorative corner sparkle */}
       <Sparkles
         className="absolute -top-4 -right-4 w-32 h-32 text-primary opacity-[0.08] pointer-events-none"

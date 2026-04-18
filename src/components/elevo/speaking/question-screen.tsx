@@ -6,15 +6,16 @@
    ═══════════════════════════════════════ */
 
 import { useEffect, useState, useRef } from "react"
-import { Mic, MicOff, Play, Pause, RotateCcw } from "lucide-react"
 
 interface QuestionScreenProps {
   question: string
   questionNumber: number
   totalQuestions: number
   duration: number // seconds
-  onComplete: () => void
+  onComplete: (audioBlob: Blob | null) => void
 }
+
+type Phase = "prep" | "recording" | "done"
 
 export function QuestionScreen({
   question,
@@ -23,346 +24,308 @@ export function QuestionScreen({
   duration,
   onComplete,
 }: QuestionScreenProps) {
-  const [timeLeft, setTimeLeft] = useState(duration)
-  const [isRecording, setIsRecording] = useState(false)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
-  const [audioURL, setAudioURL] = useState<string | null>(null)
-  const [useMockWaveform, setUseMockWaveform] = useState(false)
+  const [phase, setPhase] = useState<Phase>("prep")
+  const [isMicReady, setIsMicReady] = useState(false)
+  const [prepTime, setPrepTime] = useState(5)
+  const [recordTime, setRecordTime] = useState(duration)
   
+  const streamRef = useRef<MediaStream | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
-  const audioRef = useRef<HTMLAudioElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationRef = useRef<number | undefined>(undefined)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
 
-  // Stop recording function
-  const stopRecording = () => {
-    if (useMockWaveform) {
-      // Mock mode
-      setIsRecording(false)
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
-      }
-      // Create dummy blob
-      const dummyBlob = new Blob(["mock audio"], { type: "audio/webm" })
-      setAudioBlob(dummyBlob)
-    } else if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      // Real recording
-      mediaRecorderRef.current.stop()
-      setIsRecording(false)
-    }
-  }
-
-  // Timer countdown
+  // 1. On Mount: Request Microphone Permission silently
   useEffect(() => {
-    if (timeLeft > 0 && isRecording) {
-      const timer = window.setTimeout(() => setTimeLeft(timeLeft - 1), 1000)
-      return () => window.clearTimeout(timer)
-    } else if (timeLeft === 0 && isRecording) {
-      stopRecording()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeLeft, isRecording])
+    let isMounted = true
 
-  // Visualize audio
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then((stream) => {
+        if (!isMounted) {
+          stream.getTracks().forEach(t => t.stop())
+          return
+        }
+        streamRef.current = stream
+        setIsMicReady(true)
+      })
+      .catch((err) => {
+        console.error("Mic access denied or error:", err)
+        if (!isMounted) return
+        setIsMicReady(true) // Fallback: continue even if denied
+      })
+
+    return () => {
+      isMounted = false
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop())
+      }
+      if (animationRef.current) cancelAnimationFrame(animationRef.current)
+      if (audioContextRef.current?.state !== "closed") {
+        audioContextRef.current?.close().catch(() => {})
+      }
+    }
+  }, [])
+
+  // 2. Preparation Timer (only starts after mic is ready)
+  useEffect(() => {
+    if (phase === "prep" && isMicReady) {
+      if (prepTime > 0) {
+        const t = setTimeout(() => setPrepTime(prepTime - 1), 1000)
+        return () => clearTimeout(t)
+      } else {
+        startRecording()
+      }
+    }
+  }, [phase, prepTime, isMicReady])
+
+  // 3. Recording Timer
+  useEffect(() => {
+    if (phase === "recording") {
+      if (recordTime > 0) {
+        const t = setTimeout(() => setRecordTime(recordTime - 1), 1000)
+        return () => clearTimeout(t)
+      } else {
+        stopRecording()
+      }
+    }
+  }, [phase, recordTime])
+
+  // Professional Visualization
   const visualize = () => {
     if (!canvasRef.current) return
-
     const canvas = canvasRef.current
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
+    const dpr = window.devicePixelRatio || 1
+    const rect = canvas.getBoundingClientRect()
+    canvas.width = rect.width * dpr
+    canvas.height = rect.height * dpr
+    ctx.scale(dpr, dpr)
+
     if (analyserRef.current) {
-      // Real audio visualization
       const bufferLength = analyserRef.current.frequencyBinCount
       const dataArray = new Uint8Array(bufferLength)
 
       const draw = () => {
         animationRef.current = requestAnimationFrame(draw)
-        
         analyserRef.current!.getByteFrequencyData(dataArray)
 
-        ctx.fillStyle = "transparent"
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        ctx.clearRect(0, 0, rect.width, rect.height)
 
-        const barWidth = (canvas.width / bufferLength) * 2.5
-        let x = 0
-
-        for (let i = 0; i < bufferLength; i++) {
-          const barHeight = (dataArray[i] / 255) * canvas.height * 0.8
-
-          // Gradient color
-          const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height)
-          gradient.addColorStop(0, "#6366f1")
-          gradient.addColorStop(1, "#4f46e5")
-
-          ctx.fillStyle = gradient
-          ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight)
-
-          x += barWidth + 1
-        }
-      }
-
-      draw()
-    } else {
-      // Mock waveform animation (when mic not available)
-      let frame = 0
-      const draw = () => {
-        animationRef.current = requestAnimationFrame(draw)
+        const barCount = 45
+        const barWidth = (rect.width / barCount) * 0.5
+        const gap = (rect.width / barCount) * 0.5
         
-        ctx.fillStyle = "transparent"
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-        const barCount = 60
-        const barWidth = canvas.width / barCount - 1
+        const centerY = rect.height / 2
+        let x = gap / 2
 
         for (let i = 0; i < barCount; i++) {
-          // Create wave effect with sine
-          const barHeight = Math.abs(
-            Math.sin((i + frame) * 0.1) * 
-            Math.cos((i - frame) * 0.05) * 
-            canvas.height * 0.6
-          ) + 10
+          const dataIndex = Math.floor((i / barCount) * (bufferLength * 0.3))
+          const value = dataArray[dataIndex] || 0
+          
+          const percent = value / 255
+          const heightFactor = Math.pow(percent, 1.5)
+          const minHeight = 4
+          const barHeight = Math.max(minHeight, heightFactor * rect.height * 0.8)
 
-          const x = i * (barWidth + 1)
+          ctx.beginPath()
+          if (ctx.roundRect) {
+            ctx.roundRect(x, centerY - barHeight / 2, barWidth, barHeight, barWidth / 2)
+          } else {
+            ctx.rect(x, centerY - barHeight / 2, barWidth, barHeight)
+          }
 
-          // Gradient color
-          const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height)
-          gradient.addColorStop(0, "#6366f1")
-          gradient.addColorStop(1, "#4f46e5")
-
+          const gradient = ctx.createLinearGradient(0, centerY - barHeight/2, 0, centerY + barHeight/2)
+          gradient.addColorStop(0, "rgba(99, 102, 241, 0.3)")
+          gradient.addColorStop(0.5, "rgba(99, 102, 241, 1)")
+          gradient.addColorStop(1, "rgba(99, 102, 241, 0.3)")
+          
           ctx.fillStyle = gradient
-          ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight)
-        }
+          ctx.fill()
 
+          x += barWidth + gap
+        }
+      }
+      draw()
+    } else {
+      let frame = 0
+      const drawMock = () => {
+        animationRef.current = requestAnimationFrame(drawMock)
+        ctx.clearRect(0, 0, rect.width, rect.height)
+
+        const barCount = 45
+        const barWidth = (rect.width / barCount) * 0.5
+        const gap = (rect.width / barCount) * 0.5
+        const centerY = rect.height / 2
+        let x = gap / 2
+
+        for (let i = 0; i < barCount; i++) {
+          const heightFactor = Math.abs(Math.sin((i + frame) * 0.15) * Math.cos((i - frame) * 0.05))
+          const barHeight = Math.max(4, heightFactor * rect.height * 0.5)
+
+          ctx.beginPath()
+          if (ctx.roundRect) {
+            ctx.roundRect(x, centerY - barHeight / 2, barWidth, barHeight, barWidth / 2)
+          } else {
+            ctx.rect(x, centerY - barHeight / 2, barWidth, barHeight)
+          }
+          ctx.fillStyle = "rgba(99, 102, 241, 0.4)"
+          ctx.fill()
+          x += barWidth + gap
+        }
         frame += 0.5
       }
-
-      draw()
+      drawMock()
     }
   }
 
-  // Start recording
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      
-      // Setup audio context for visualization
-      audioContextRef.current = new AudioContext()
-      analyserRef.current = audioContextRef.current.createAnalyser()
-      const source = audioContextRef.current.createMediaStreamSource(stream)
-      source.connect(analyserRef.current)
-      analyserRef.current.fftSize = 256
-      
-      // Start visualization
-      visualize()
-      
-      // Setup media recorder
-      const mediaRecorder = new MediaRecorder(stream)
-      mediaRecorderRef.current = mediaRecorder
-      audioChunksRef.current = []
-
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data)
-      }
-
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" })
-        setAudioBlob(audioBlob)
-        const url = URL.createObjectURL(audioBlob)
-        setAudioURL(url)
+  const startRecording = () => {
+    setPhase("recording")
+    
+    if (streamRef.current) {
+      try {
+        audioContextRef.current = new window.AudioContext()
+        analyserRef.current = audioContextRef.current.createAnalyser()
+        analyserRef.current.fftSize = 256
+        analyserRef.current.smoothingTimeConstant = 0.8
         
-        // Stop visualization
-        if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current)
-        }
+        const source = audioContextRef.current.createMediaStreamSource(streamRef.current)
+        source.connect(analyserRef.current)
         
-        // Stop all tracks
-        stream.getTracks().forEach(track => track.stop())
-      }
+        visualize()
+        
+        const mediaRecorder = new MediaRecorder(streamRef.current)
+        mediaRecorderRef.current = mediaRecorder
+        const chunks: Blob[] = []
 
-      mediaRecorder.start()
-      setIsRecording(true)
-      setTimeLeft(duration)
-      setUseMockWaveform(false)
-    } catch (error) {
-      console.error("Microphone access denied:", error)
-      
-      // Use mock waveform instead
-      setUseMockWaveform(true)
-      setIsRecording(true)
-      setTimeLeft(duration)
-      visualize()
-      
-      // Simulate recording completion
-      setTimeout(() => {
-        if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current)
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunks.push(e.data)
         }
-        // Create a dummy blob for demo
-        const dummyBlob = new Blob(["mock audio"], { type: "audio/webm" })
-        setAudioBlob(dummyBlob)
-        setIsRecording(false)
-      }, duration * 1000)
+
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(chunks, { type: "audio/webm" })
+          if (animationRef.current) cancelAnimationFrame(animationRef.current)
+          if (audioContextRef.current?.state !== "closed") audioContextRef.current?.close().catch(()=>{})
+          onComplete(audioBlob)
+        }
+
+        mediaRecorder.start(100)
+      } catch (error) {
+        console.error("Recording setup failed", error)
+        visualize()
+      }
+    } else {
+      visualize()
     }
   }
 
-  // Play recorded audio
-  const playAudio = () => {
-    if (useMockWaveform) {
-      // Mock playback - just toggle state
-      setIsPlaying(!isPlaying)
-      if (!isPlaying) {
-        // Auto-stop after 2 seconds
-        setTimeout(() => setIsPlaying(false), 2000)
-      }
-    } else if (audioURL && audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause()
-        setIsPlaying(false)
-      } else {
-        audioRef.current.play()
-        setIsPlaying(true)
-      }
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop() // This will trigger onstop which calls onComplete
+    } else {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current)
+      onComplete(null)
     }
   }
 
-  // Reset recording
-  const resetRecording = () => {
-    setAudioBlob(null)
-    setAudioURL(null)
-    setTimeLeft(duration)
-    setIsPlaying(false)
-    setUseMockWaveform(false)
+  // Timer circle calculation
+  const circumference = 2 * Math.PI * 24 // r=24
+  let strokeDashoffset = 0
+  if (phase === "prep") {
+    strokeDashoffset = circumference - (prepTime / 5) * circumference
+  } else if (phase === "recording") {
+    strokeDashoffset = circumference - (recordTime / duration) * circumference
   }
-
-  // Progress percentage
-  const progress = ((duration - timeLeft) / duration) * 100
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Progress bar */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-            Savol {questionNumber} / {totalQuestions}
-          </span>
-          <span className="text-xs font-bold text-primary">
-            {timeLeft}s
+    <div className="flex flex-col flex-1 h-full w-full pt-4 animate-fade-in">
+      
+      {/* Header Info */}
+      <div className="flex items-center justify-between mb-6 px-1">
+        <span className="text-[12px] font-black uppercase tracking-[0.15em] text-primary bg-primary/10 px-3 py-1.5 rounded-full">
+          Q {questionNumber} / {totalQuestions}
+        </span>
+        
+        <div className="relative w-12 h-12 flex items-center justify-center rounded-full bg-primary shadow-md shadow-primary/20">
+          <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 56 56">
+            <circle
+              cx="28" cy="28" r="24"
+              fill="transparent"
+              stroke="rgba(255,255,255,0.2)"
+              strokeWidth="3"
+            />
+            <circle
+              cx="28" cy="28" r="24"
+              fill="transparent"
+              stroke="#ffffff"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              className="transition-all duration-1000 ease-linear"
+            />
+          </svg>
+          <span className="relative z-10 text-base font-black text-white">
+            {phase === "prep" ? prepTime : recordTime}
           </span>
         </div>
-        <div className="h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-          <div
-            className="h-full bg-primary transition-all duration-300 ease-linear"
-            style={{ width: `${progress}%` }}
+      </div>
+
+      {/* Progress Bar (Global Question Progress) */}
+      <div className="h-1 bg-surface-container-high rounded-full overflow-hidden mb-8">
+        <div
+          className="h-full bg-primary transition-all duration-500 ease-out"
+          style={{ width: `${((questionNumber - 1) / totalQuestions) * 100}%` }}
+        />
+      </div>
+
+      {/* Question Text — neon corner borders */}
+      <div className="relative mb-3">
+        {/* Top-left corner */}
+        <span className="pointer-events-none absolute -top-[2px] -left-[2px] w-7 h-7 rounded-tl-xl"
+          style={{
+            borderTop: "2.5px solid",
+            borderLeft: "2.5px solid",
+            borderColor: "rgb(99 102 241)",
+            boxShadow: "inset 2px 2px 6px rgba(99,102,241,0.25), -2px -2px 10px rgba(99,102,241,0.35)",
+          }}
+        />
+        {/* Bottom-right corner */}
+        <span className="pointer-events-none absolute -bottom-[2px] -right-[2px] w-7 h-7 rounded-br-xl"
+          style={{
+            borderBottom: "2.5px solid",
+            borderRight: "2.5px solid",
+            borderColor: "rgb(99 102 241)",
+            boxShadow: "inset -2px -2px 6px rgba(99,102,241,0.25), 2px 2px 10px rgba(99,102,241,0.35)",
+          }}
+        />
+
+        <div className="elevo-card px-6 py-10 text-center flex items-center justify-center min-h-[160px] border border-outline-variant/50">
+          <h2 className="text-xl font-bold text-on-surface leading-snug">
+            {question}
+          </h2>
+        </div>
+      </div>
+
+      {/* Visualizer Area — directly below card */}
+      <div className="flex flex-col items-center justify-start relative">
+        <div className="w-full relative h-[120px] flex items-center justify-center">
+          <canvas
+            ref={canvasRef}
+            className={`w-full h-full transition-opacity duration-500 ${phase === "prep" ? "opacity-30" : "opacity-100"}`}
           />
+
+          {/* Prep State Overlay */}
+          {phase === "prep" && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-[15px] font-bold tracking-wide text-amber-500">Tayyorlaning...</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Question card */}
-      <div className="elevo-card p-8 mb-6">
-        <div className="flex items-start gap-4">
-          <div className="w-10 h-10 bg-primary/10 border border-primary/15 rounded-xl flex items-center justify-center shrink-0">
-            <span className="text-lg font-black text-primary">
-              {questionNumber}
-            </span>
-          </div>
-          <div className="flex-1">
-            <h2 className="text-xl font-bold text-on-surface leading-relaxed">
-              {question}
-            </h2>
-          </div>
-        </div>
-      </div>
-
-      {/* Waveform visualization */}
-      <div className="elevo-card p-6 mb-6 relative">
-        {useMockWaveform && isRecording && (
-          <div className="absolute top-3 right-3 z-10">
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary">
-              Demo Mode
-            </span>
-          </div>
-        )}
-        
-        <canvas
-          ref={canvasRef}
-          width={600}
-          height={120}
-          className="w-full h-[120px] rounded-lg"
-        />
-        
-        {!isRecording && !audioBlob && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <p className="text-sm text-on-surface-variant">
-              Yozuvni boshlash uchun mikrofon tugmasini bosing
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Controls */}
-      <div className="flex items-center justify-center gap-4">
-        {!audioBlob ? (
-          <>
-            {!isRecording ? (
-              <button
-                onClick={startRecording}
-                className="w-16 h-16 bg-primary hover:bg-primary-dim rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-110 active:scale-95"
-              >
-                <Mic className="w-7 h-7 text-white" strokeWidth={2.5} />
-              </button>
-            ) : (
-              <button
-                onClick={stopRecording}
-                className="w-16 h-16 bg-error hover:bg-error-dim rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-110 active:scale-95 animate-pulse"
-              >
-                <MicOff className="w-7 h-7 text-white" strokeWidth={2.5} />
-              </button>
-            )}
-          </>
-        ) : (
-          <>
-            <button
-              onClick={resetRecording}
-              className="w-12 h-12 bg-surface-container-high hover:bg-surface-container-highest rounded-full flex items-center justify-center transition-all hover:scale-110"
-            >
-              <RotateCcw className="w-5 h-5 text-on-surface-variant" />
-            </button>
-
-            <button
-              onClick={playAudio}
-              className="w-16 h-16 bg-primary hover:bg-primary-dim rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-110 active:scale-95"
-            >
-              {isPlaying ? (
-                <Pause className="w-7 h-7 text-white fill-white" strokeWidth={2.5} />
-              ) : (
-                <Play className="w-7 h-7 text-white fill-white" strokeWidth={2.5} />
-              )}
-            </button>
-
-            <button
-              onClick={onComplete}
-              className="px-6 py-3 elevo-btn-primary rounded-xl font-bold transition-all hover:scale-105"
-            >
-              Keyingi
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Hidden audio element */}
-      {audioURL && (
-        <audio
-          ref={audioRef}
-          src={audioURL}
-          onEnded={() => setIsPlaying(false)}
-          className="hidden"
-        />
-      )}
     </div>
   )
 }

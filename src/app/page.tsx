@@ -1,47 +1,59 @@
+"use client";
+
 /* ═══════════════════════════════════════
    Dashboard Page — asosiy sahifa
    ═══════════════════════════════════════ */
 
-import { AppLayout }     from "@/components/elevo/layout/app-layout"
-import { AppHeader }     from "@/components/elevo/layout/app-header"
-import { BottomNav }     from "@/components/elevo/layout/bottom-nav"
-import { WelcomeCard }   from "@/components/elevo/dashboard/welcome-card"
-import { ProgressCard }  from "@/components/elevo/dashboard/progress-card"
-import { ExamStats }     from "@/components/elevo/dashboard/exam-stats"
-import { QuickPractice } from "@/components/elevo/dashboard/quick-practice"
+import { useState, useEffect } from "react";
+import { WelcomeCard }    from "@/components/elevo/dashboard/welcome-card";
+import { ProgressCard }   from "@/components/elevo/dashboard/progress-card";
+import { ExamStats }      from "@/components/elevo/dashboard/exam-stats";
+import { QuickPractice }  from "@/components/elevo/dashboard/quick-practice";
+import { DebugPanel }     from "@/components/elevo/debug-panel";
+import { useAuthStore }   from "@/store/auth.store";
+import { useCurrentUser } from "@/hooks/auth/use-current-user";
+import { getDisplayName } from "@/types/auth.types";
 
 export default function DashboardPage() {
+  const [mounted, setMounted] = useState(false);
+  const user = useAuthStore((s) => s.user);
+  useCurrentUser(); // background'da fresh data oladi va store'ni yangilaydi
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const displayName = getDisplayName(user);
+  const level = user?.status === "PAID" ? "B2" : "B1";
+
   return (
-    <AppLayout>
-      <AppHeader />
+    <div className="flex flex-col gap-5 relative z-10">
+      <WelcomeCard
+        name={displayName}
+        level={level}
+        streak={0}
+        xp={0}
+      />
 
-      <main className="px-5 pt-[88px] pb-28 flex flex-col gap-5">
-        <WelcomeCard
-          name="Akbar"
-          level="B1"
-          streak={7}
-          xp={2340}
-        />
+      <ProgressCard
+        level={level}
+        progress={0}
+        questionsAnswered={0}
+        accuracy={0}
+        studyTime="0 soat"
+      />
 
-        <ProgressCard
-          level="B1"
-          progress={70}
-          questionsAnswered={1240}
-          accuracy={84}
-          studyTime="42 soat"
-        />
+      <ExamStats
+        listening={0}
+        reading={0}
+        speaking={0}
+        writing={0}
+      />
 
-        <ExamStats
-          listening={7.5}
-          reading={8.0}
-          speaking={6.5}
-          writing={7.0}
-        />
-
-        <QuickPractice />
-      </main>
-
-      <BottomNav />
-    </AppLayout>
-  )
+      <QuickPractice />
+      
+      {/* DEV DEBUG PANEL */}
+      <DebugPanel />
+    </div>
+  );
 }

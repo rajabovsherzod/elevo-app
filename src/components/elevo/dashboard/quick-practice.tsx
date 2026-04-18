@@ -26,7 +26,7 @@ function PracticeButton({ item }: { item: PracticeItem }) {
   return (
     <Link
       href={item.href}
-      className="group elevo-card-hover flex flex-col items-start p-5"
+      className="group elevo-card-hover elevo-card-border flex flex-col items-start p-5"
     >
       {/* Icon */}
       <div className="w-11 h-11 bg-primary/10 border border-primary/15 rounded-xl flex items-center justify-center mb-4 transition-transform duration-200 group-hover:scale-110">

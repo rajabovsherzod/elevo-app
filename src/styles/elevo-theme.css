@@ -171,6 +171,7 @@
     /* outline-variant = ghost border (15% opacity in use) */
     --el-outline:                  #94a3b8;  /* slate-400 — medium */
     --el-outline-variant:          #cbd5e1;  /* slate-200 — subtle */
+    --el-nav-sep:                  rgba(0, 0, 0, 0.10);
 
     /* ── ERROR ────────────────────────────────────────────── */
     --el-error:                    #ef4444;  /* red-500 */
@@ -258,7 +259,8 @@
 
     /* ── OUTLINE / BORDERS ────────────────────────────────── */
     --el-outline:                  #3f3f46;  /* zinc-700 */
-    --el-outline-variant:          rgba(255, 255, 255, 0.06);  /* ultra-subtle */
+    --el-outline-variant:          rgba(255, 255, 255, 0.10);  /* nav separator */
+    --el-nav-sep:                  rgba(255, 255, 255, 0.12);
 
     /* ── ERROR ────────────────────────────────────────────── */
     --el-error:                    #f87171;  /* red-400 */
@@ -356,6 +358,14 @@
     --color-error-container:          var(--el-error-container);
     --color-on-error-container:       var(--el-on-error-container);
 
+    /* BRAND → remap to elevo primary (indigo) so UntitledUI primary buttons match the app color */
+    --color-bg-brand-solid:           var(--el-primary);
+    --color-bg-brand-solid_hover:     var(--el-primary-dim);
+    --color-fg-brand-primary:         var(--el-primary);
+    --color-fg-brand-secondary:       var(--el-primary);
+    --color-border-brand:             var(--el-primary);
+    --color-text-brand-secondary:     var(--el-primary);
+
     /* SHADOW ALIASES */
     --shadow-ambient:                 var(--el-shadow-ambient);
     --shadow-card:                    var(--el-shadow-card);
@@ -428,6 +438,19 @@
         border: 1px solid color-mix(in srgb, var(--el-outline-variant) 15%, transparent);
     }
 
+    /* Subtle card border — works in both light & dark via currentColor */
+    .elevo-card-border {
+        border: 1px solid color-mix(in srgb, currentColor 8%, transparent);
+    }
+
+    /* Nav separator — visible divider line for header/bottom-nav */
+    .elevo-nav-sep-bottom {
+        box-shadow: 0 1px 0 0 var(--el-nav-sep);
+    }
+    .elevo-nav-sep-top {
+        box-shadow: 0 -1px 0 0 var(--el-nav-sep);
+    }
+
     /* Primary gradient button (DESIGN.md §5 Buttons) */
     .elevo-btn-primary {
         background: linear-gradient(135deg, var(--el-primary), var(--el-primary-dim));
@@ -458,4 +481,23 @@
         background-image: radial-gradient(var(--el-outline-variant) 1px, transparent 1px);
         background-size: 24px 24px;
     }
+}
+
+/* ── Page Transitions — template.tsx remount triggers this on every navigation ── */
+
+@keyframes page-enter {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-enter {
+    animation: page-enter 210ms ease-out both;
+}
+
+/* Header/Nav locked during any view transition (safety net) */
+header { view-transition-name: app-header; }
+nav[data-bottom-nav] { view-transition-name: app-bottom-nav; }
+::view-transition-old(app-header), ::view-transition-new(app-header),
+::view-transition-old(app-bottom-nav), ::view-transition-new(app-bottom-nav) {
+    animation: none;
 }

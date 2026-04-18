@@ -4,68 +4,59 @@
    ═══════════════════════════════════════ */
 
 import Link from "next/link"
-import { AppLayout } from "@/components/elevo/layout/app-layout"
-import { AppHeader } from "@/components/elevo/layout/app-header"
-import { BottomNav } from "@/components/elevo/layout/bottom-nav"
 import { PageHeader } from "@/components/elevo/shared/page-header"
 import { Mic, Play, Clock, MessageSquare, Users, Lightbulb } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 export default function SpeakingPage() {
   return (
-    <AppLayout>
-      <AppHeader />
+    <div className="flex flex-col gap-5">
+      {/* Page Header */}
+      <PageHeader
+        title="Speaking Practice"
+        subtitle="Nutq ko'nikmalarini rivojlantiring"
+        icon={Mic}
+      />
 
-      <main className="px-5 pt-[88px] pb-28 flex flex-col gap-5">
-        {/* Page Header */}
-        <PageHeader
-          title="Speaking Practice"
-          subtitle="Nutq ko'nikmalarini rivojlantiring"
-          icon={Mic}
+      {/* Full Mock Test */}
+      <FullMockCard />
+
+      {/* Parts Grid */}
+      <div className="grid grid-cols-2 gap-4">
+        <PartCard
+          part="Part 1.1"
+          title="Introduction"
+          duration="2 min"
+          icon={MessageSquare}
+          color="#6366f1"
+          href="/speaking/part-1-1"
         />
-
-        {/* Full Mock Test */}
-        <FullMockCard />
-
-        {/* Parts Grid */}
-        <div className="grid grid-cols-2 gap-4">
-          <PartCard
-            part="Part 1.1"
-            title="Introduction"
-            duration="2 min"
-            icon={MessageSquare}
-            color="#6366f1"
-            href="/speaking/part-1-1"
-          />
-          <PartCard
-            part="Part 1.2"
-            title="Familiar Topics"
-            duration="2 min"
-            icon={Users}
-            color="#8b5cf6"
-            href="/speaking/part-1-2"
-          />
-          <PartCard
-            part="Part 2"
-            title="Long Turn"
-            duration="3 min"
-            icon={Clock}
-            color="#ec4899"
-            href="/speaking/part-2"
-          />
-          <PartCard
-            part="Part 3"
-            title="Discussion"
-            duration="3 min"
-            icon={Lightbulb}
-            color="#f59e0b"
-            href="/speaking/part-3"
-          />
-        </div>
-      </main>
-
-      <BottomNav />
-    </AppLayout>
+        <PartCard
+          part="Part 1.2"
+          title="Familiar Topics"
+          duration="2 min"
+          icon={Users}
+          color="#8b5cf6"
+          href="/speaking/part-1-2"
+        />
+        <PartCard
+          part="Part 2"
+          title="Long Turn"
+          duration="3 min"
+          icon={Clock}
+          color="#ec4899"
+          href="/speaking/part-2"
+        />
+        <PartCard
+          part="Part 3"
+          title="Discussion"
+          duration="3 min"
+          icon={Lightbulb}
+          color="#f59e0b"
+          href="/speaking/part-3"
+        />
+      </div>
+    </div>
   )
 }
 
@@ -138,20 +129,22 @@ function PartCard({ part, title, duration, icon: Icon, color, href }: PartCardPr
   return (
     <Link
       href={href}
+      prefetch={true}
       className="group elevo-card-hover p-5 flex flex-col"
+      style={{ ['--part-color' as string]: color }}
     >
       {/* Icon */}
       <div
         className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
         style={{
-          backgroundColor: `${color}15`,
+          backgroundColor: `color-mix(in srgb, var(--part-color) 8%, transparent)`,
           borderWidth: 1,
-          borderColor: `${color}25`,
+          borderColor: `color-mix(in srgb, var(--part-color) 15%, transparent)`,
         }}
       >
         <Icon
           className="w-6 h-6"
-          style={{ color }}
+          style={{ color: 'var(--part-color)' }}
           strokeWidth={2}
           aria-hidden
         />
