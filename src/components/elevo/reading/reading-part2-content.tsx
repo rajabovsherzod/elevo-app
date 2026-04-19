@@ -2,8 +2,8 @@
 
 import { Button }                    from "@/components/base/buttons/button"
 import { PageHeaderWithBack }        from "@/components/elevo/shared/page-header-with-back"
+import { ExamLoading }               from "@/components/elevo/shared/exam-loading"
 import { useReadingPart2 }           from "./use-reading-part2"
-import { ReadingPart2Loading }       from "./reading-part2-loading"
 import { ReadingPart1Timer }         from "./reading-part1-timer"
 import { ReadingPart2AnswersGrid }   from "./reading-part2-answers-grid"
 import { ReadingPart2Questions }     from "./reading-part2-questions"
@@ -17,7 +17,19 @@ export function ReadingPart2Content() {
     handleSelect, handleSubmit,
   } = useReadingPart2()
 
-  if (loading) return <ReadingPart2Loading />
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-5 pb-6">
+        <PageHeaderWithBack
+          title="Part 2 — Matching"
+          rightContent={undefined}
+        />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <ExamLoading />
+        </div>
+      </div>
+    )
+  }
 
   if (!questionData) {
     return (

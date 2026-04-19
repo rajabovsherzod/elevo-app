@@ -21,7 +21,7 @@ export const TelegramAutoAuth = ({ children }: PropsWithChildren) => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const attempted = useRef(false);
 
-  useEffect(() => {
+useEffect(() => {
     if (isAuthenticated || attempted.current) return;
 
     let attempts = 0;

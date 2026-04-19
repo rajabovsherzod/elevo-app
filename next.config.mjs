@@ -7,6 +7,7 @@ const nextConfig = {
     },
     // Cloudflare tunnel uchun
     allowedDevOrigins: [
+        'evening-chapter-smaller-needed.trycloudflare.com',
         'chosen-undertaken-joined-forestry.trycloudflare.com',
         'usgs-pda-friendly-until.trycloudflare.com',
         'publicity-sudden-lafayette-fleet.trycloudflare.com',
@@ -20,6 +21,7 @@ const nextConfig = {
         'vegetarian-capabilities-canberra-broken.trycloudflare.com',
         'collar-waiting-commission-stats.trycloudflare.com',
         'width-entrance-daily-hamilton.trycloudflare.com',
+        'gloves-converter-samuel-throwing.trycloudflare.com',
     ],
 };
 

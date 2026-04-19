@@ -1,10 +1,11 @@
 "use client";
 
-import { Sun, Moon, Monitor, User, Bell, HelpCircle, LogOut, ChevronRight, Shield } from "lucide-react";
+import { Sun, Moon, Monitor, User, Bell, HelpCircle, LogOut, ChevronRight, Shield, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/providers/theme";
 import { useEffect, useState } from "react";
 import { PageHeader }     from "@/components/elevo/shared/page-header";
+import { ExamLoading }    from "@/components/elevo/shared/exam-loading";
 import { useAuthStore }   from "@/store/auth.store";
 import { useCurrentUser } from "@/hooks/auth/use-current-user";
 import { getDisplayName, getInitial } from "@/types/auth.types";
@@ -109,6 +110,7 @@ export default function ProfilePage() {
   const user    = useAuthStore((s) => s.user);
   const logout  = useAuthStore((s) => s.logout);
   const { isLoading } = useCurrentUser();
+  const [showLoadingPreview, setShowLoadingPreview] = useState(false);
 
   const displayName = getDisplayName(user);
   const initial     = getInitial(user);
@@ -119,6 +121,22 @@ export default function ProfilePage() {
   const statusLabel: Record<string, string> = {
     NEW: "Yangi", UNPAID: "Obuna yo'q", PAID: "Obunador",
   };
+
+  // Show loading preview
+  if (showLoadingPreview) {
+    return (
+      <div className="flex flex-col gap-5 pb-6">
+        <PageHeader title="Loading Preview" icon={Loader2} />
+        <ExamLoading />
+        <button
+          onClick={() => setShowLoadingPreview(false)}
+          className="elevo-card elevo-card-border p-4 text-sm font-semibold text-primary hover:bg-primary/5 transition-colors"
+        >
+          Yopish
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5 pb-6">
@@ -200,6 +218,12 @@ export default function ProfilePage() {
       {/* ── Boshqa ─────────────────────────────────────────── */}
       <Section title="Boshqa">
         <MenuRow icon={HelpCircle} label="Yordam markazi" sublabel="FAQ va qo'llab-quvvatlash" />
+        <MenuRow
+          icon={Loader2}
+          label="Loading State Preview"
+          sublabel="Development uchun loading ko'rinishi"
+          onClick={() => setShowLoadingPreview(true)}
+        />
         <MenuRow
           icon={LogOut}
           label="Chiqish"

@@ -2,8 +2,8 @@
 
 import { Button }                  from "@/components/base/buttons/button"
 import { PageHeaderWithBack }      from "@/components/elevo/shared/page-header-with-back"
+import { ExamLoading }             from "@/components/elevo/shared/exam-loading"
 import { useReadingPart1 }         from "./use-reading-part1"
-import { ReadingPart1Loading }     from "./reading-part1-loading"
 import { ReadingPart1Timer }       from "./reading-part1-timer"
 import { ReadingPart1Text }        from "./reading-part1-text"
 import { ReadingPart1Result }      from "./reading-part1-result"
@@ -16,7 +16,19 @@ export function ReadingPart1Content() {
     handleAnswerChange, handleSubmit,
   } = useReadingPart1()
 
-  if (loading) return <ReadingPart1Loading />
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-5 pb-6">
+        <PageHeaderWithBack
+          title="Part 1.1 — Gap Filling"
+          rightContent={undefined}
+        />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <ExamLoading />
+        </div>
+      </div>
+    )
+  }
 
   if (!questionData) {
     return (
