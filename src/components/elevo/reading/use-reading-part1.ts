@@ -61,6 +61,12 @@ export function useReadingPart1() {
 
   // Load question on mount
   useEffect(() => {
+    // Clear previous data and show loading
+    setQuestionData(null)
+    setResult(null)
+    setAnswers({})
+    setLoading(true)
+    
     ;(async () => {
       try {
         const data = await getReadingPart1Question()
@@ -80,7 +86,7 @@ export function useReadingPart1() {
         setLoading(false)
       }
     })()
-  }, [])
+  }, []) // Only run on mount
 
   // Timer
   useEffect(() => {

@@ -44,7 +44,10 @@ export interface ReadingPart1EvaluateResponse {
 export async function getReadingPart1Question(
   examId?: number
 ): Promise<ReadingPart1QuestionResponse> {
-  const params = examId ? { exam_id: examId } : {}
+  const params: Record<string, any> = examId ? { exam_id: examId } : {}
+  // Add cache bust to prevent browser/Next.js caching
+  params._t = Date.now()
+  
   const { data } = await apiClient.get<ReadingPart1QuestionResponse>(
     ENDPOINTS.reading.part(1).question,
     { params }
@@ -63,8 +66,8 @@ export interface ReadingPart2Set {
   title: string | null
   instruction: string | null
   text: string | null
-  questions: ReadingPart2AnswerOption[]
-  answers: ReadingPart2AnswerOption[]
+  questions: ReadingPart2AnswerOption[]  // A-J (10 ta questions)
+  answers: ReadingPart2AnswerOption[]    // 1-8 (8 ta passages)
 }
 
 export interface ReadingPart2QuestionResponse {
@@ -100,7 +103,10 @@ export interface ReadingPart2EvaluateResponse {
 export async function getReadingPart2Question(
   examId?: number
 ): Promise<ReadingPart2QuestionResponse> {
-  const params = examId ? { exam_id: examId } : {}
+  const params: Record<string, any> = examId ? { exam_id: examId } : {}
+  // Add cache bust to prevent browser/Next.js caching
+  params._t = Date.now()
+  
   const { data } = await apiClient.get<ReadingPart2QuestionResponse>(
     ENDPOINTS.reading.part(2).question,
     { params }
@@ -118,6 +124,74 @@ export async function evaluateReadingPart2(
   return data
 }
 
+// ── Part 3 ──────────────────────────────────────────────────────────────────
+
+export interface ReadingPart3AnswerOption {
+  id: number
+  text: string
+}
+
+export interface ReadingPart3Set {
+  title: string | null
+  instruction: string | null
+  text: string | null
+  questions: ReadingPart3AnswerOption[]  // 6 ta paragraphs
+  answers: ReadingPart3AnswerOption[]    // 8 ta headings
+}
+
+export interface ReadingPart3QuestionResponse {
+  exam_id: number
+  part: number
+  set: ReadingPart3Set
+}
+
+export interface ReadingPart3Match {
+  question_id: number
+  answer_question_id: number
+}
+
+export interface ReadingPart3EvaluateRequest {
+  exam_id: number
+  matches: ReadingPart3Match[]
+}
+
+export interface ReadingPart3DetailItem {
+  question_id: number
+  answer_question_id: number
+  correct: boolean
+}
+
+export interface ReadingPart3EvaluateResponse {
+  correct_count: number
+  total_questions: number
+  score_percent: number
+  details: ReadingPart3DetailItem[]
+}
+
+export async function getReadingPart3Question(
+  examId?: number
+): Promise<ReadingPart3QuestionResponse> {
+  const params: Record<string, any> = examId ? { exam_id: examId } : {}
+  // Add cache bust to prevent browser/Next.js caching
+  params._t = Date.now()
+  
+  const { data } = await apiClient.get<ReadingPart3QuestionResponse>(
+    ENDPOINTS.reading.part(3).question,
+    { params }
+  )
+  return data
+}
+
+export async function evaluateReadingPart3(
+  payload: ReadingPart3EvaluateRequest
+): Promise<ReadingPart3EvaluateResponse> {
+  const { data } = await apiClient.post<ReadingPart3EvaluateResponse>(
+    ENDPOINTS.reading.part(3).evaluate,
+    payload
+  )
+  return data
+}
+
 // ── Part 1 evaluate ─────────────────────────────────────────────────────────
 
 export async function evaluateReadingPart1(
@@ -125,6 +199,81 @@ export async function evaluateReadingPart1(
 ): Promise<ReadingPart1EvaluateResponse> {
   const { data } = await apiClient.post<ReadingPart1EvaluateResponse>(
     ENDPOINTS.reading.part(1).evaluate,
+    payload
+  )
+  return data
+}
+
+// ── Part 4 ──────────────────────────────────────────────────────────────────
+
+export interface ReadingPart4AnswerOption {
+  id: number
+  answer: string
+}
+
+export interface ReadingPart4QuestionItem {
+  id: number
+  question: string
+  answers: ReadingPart4AnswerOption[]  // 4 ta (MCQ) yoki 3 ta (T/F/NG)
+}
+
+export interface ReadingPart4TextData {
+  id: number
+  title: string | null
+  instruction: string | null
+  text: string
+  questions: ReadingPart4QuestionItem[]  // 9 ta (4 MCQ + 5 T/F/NG)
+}
+
+export interface ReadingPart4QuestionResponse {
+  exam_id: number
+  part: number
+  text: ReadingPart4TextData
+}
+
+export interface ReadingPart4Answer {
+  question_id: number
+  answer_id: number
+}
+
+export interface ReadingPart4EvaluateRequest {
+  exam_id: number
+  answers: ReadingPart4Answer[]
+}
+
+export interface ReadingPart4DetailItem {
+  question_id: number
+  answer_id: number
+  correct: boolean
+  correct_answer: string  // To'g'ri javob matni
+}
+
+export interface ReadingPart4EvaluateResponse {
+  correct_count: number
+  total_questions: number
+  score_percent: number
+  details: ReadingPart4DetailItem[]
+}
+
+export async function getReadingPart4Question(
+  examId?: number
+): Promise<ReadingPart4QuestionResponse> {
+  const params: Record<string, any> = examId ? { exam_id: examId } : {}
+  // Add cache bust to prevent browser/Next.js caching
+  params._t = Date.now()
+  
+  const { data } = await apiClient.get<ReadingPart4QuestionResponse>(
+    ENDPOINTS.reading.part(4).question,
+    { params }
+  )
+  return data
+}
+
+export async function evaluateReadingPart4(
+  payload: ReadingPart4EvaluateRequest
+): Promise<ReadingPart4EvaluateResponse> {
+  const { data } = await apiClient.post<ReadingPart4EvaluateResponse>(
+    ENDPOINTS.reading.part(4).evaluate,
     payload
   )
   return data

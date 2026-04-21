@@ -2,51 +2,48 @@
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import {
-  getReadingPart2Question,
-  evaluateReadingPart2,
-  type ReadingPart2QuestionResponse,
-  type ReadingPart2EvaluateResponse,
+  getReadingPart4Question,
+  evaluateReadingPart4,
+  type ReadingPart4QuestionResponse,
+  type ReadingPart4EvaluateResponse,
 } from "@/lib/api/reading"
 
-const TIMER_DURATION = 10 * 60
+const TIMER_DURATION = 15 * 60  // 15 minutes for Part 4 (longer text)
 
-export function useReadingPart2() {
+export function useReadingPart4() {
   const [loading, setLoading]           = useState(true)
   const [submitting, setSubmitting]     = useState(false)
-  const [questionData, setQuestionData] = useState<ReadingPart2QuestionResponse | null>(null)
-  const [matches, setMatches]           = useState<Record<number, number>>({})
-  const [result, setResult]             = useState<ReadingPart2EvaluateResponse | null>(null)
+  const [questionData, setQuestionData] = useState<ReadingPart4QuestionResponse | null>(null)
+  const [answers, setAnswers]           = useState<Record<number, number>>({})  // question_id -> answer_id
+  const [result, setResult]             = useState<ReadingPart4EvaluateResponse | null>(null)
   const [timeLeft, setTimeLeft]         = useState(TIMER_DURATION)
 
-  const questionDataRef = useRef<ReadingPart2QuestionResponse | null>(null)
-  const matchesRef      = useRef<Record<number, number>>({})
+  const questionDataRef = useRef<ReadingPart4QuestionResponse | null>(null)
+  const answersRef      = useRef<Record<number, number>>({})
   const timerRef        = useRef<ReturnType<typeof setInterval> | null>(null)
   const submittingRef   = useRef(false)
 
   useEffect(() => { questionDataRef.current = questionData }, [questionData])
-  useEffect(() => { matchesRef.current = matches }, [matches])
+  useEffect(() => { answersRef.current = answers }, [answers])
   useEffect(() => { submittingRef.current = submitting }, [submitting])
 
   const handleSubmit = useCallback(async () => {
     const qd  = questionDataRef.current
-    const m   = matchesRef.current
+    const a   = answersRef.current
     if (!qd || submittingRef.current) return
 
     if (timerRef.current) clearInterval(timerRef.current)
     setSubmitting(true)
 
     try {
-      // Backend expects: { question_id, answer_question_id }
-      // m = { passage_id: question_id }
-      // Backend'da: question = A-J (10 ta), answer/passage = 1-8 (8 ta)
-      const matchesArray = Object.entries(m).map(([passageId, questionId]) => ({
-        question_id: questionId,        // A-J question
-        answer_question_id: parseInt(passageId),  // 1-8 passage
+      const answersArray = Object.entries(a).map(([questionId, answerId]) => ({
+        question_id: parseInt(questionId),
+        answer_id: answerId,
       }))
-      const response = await evaluateReadingPart2({ exam_id: qd.exam_id, matches: matchesArray })
+      const response = await evaluateReadingPart4({ exam_id: qd.exam_id, answers: answersArray })
       setResult(response)
     } catch (err) {
-      console.error("evaluate part2 failed:", err)
+      console.error("evaluate part4 failed:", err)
     } finally {
       setSubmitting(false)
     }
@@ -55,27 +52,24 @@ export function useReadingPart2() {
   const handleSubmitRef = useRef(handleSubmit)
   useEffect(() => { handleSubmitRef.current = handleSubmit }, [handleSubmit])
 
-  const handleSelect = useCallback((passageId: number, questionId: number) => {
-    setMatches((prev) => {
-      if (prev[passageId] === questionId) return prev
-      return { ...prev, [passageId]: questionId }
-    })
+  const handleSelect = useCallback((questionId: number, answerId: number) => {
+    setAnswers((prev) => ({ ...prev, [questionId]: answerId }))
   }, [])
 
   useEffect(() => {
     // Clear previous data and show loading
     setQuestionData(null)
     setResult(null)
-    setMatches({})
+    setAnswers({})
     setLoading(true)
     
     ;(async () => {
       try {
-        const data = await getReadingPart2Question()
+        const data = await getReadingPart4Question()
         setQuestionData(data)
         setTimeLeft(TIMER_DURATION)
       } catch (err) {
-        console.error("load part2 failed:", err)
+        console.error("load part4 failed:", err)
       } finally {
         setLoading(false)
       }
@@ -102,14 +96,13 @@ export function useReadingPart2() {
     return `${m}:${s.toString().padStart(2, "0")}`
   }
 
-  const questions       = questionData?.set.questions ?? []
-  const passages        = questionData?.set.answers ?? []
-  const allMatched      = passages.length > 0 && passages.every((p) => matches[p.id] !== undefined)
+  const questions       = questionData?.text.questions ?? []
+  const allAnswered     = questions.length > 0 && questions.every((q) => answers[q.id] !== undefined)
 
   return {
     loading, submitting, questionData,
-    matches, result, timeLeft,
-    allMatched, formatTime,
+    answers, result, timeLeft,
+    allAnswered, formatTime,
     handleSelect, handleSubmit,
   }
 }

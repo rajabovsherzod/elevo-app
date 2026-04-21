@@ -7,6 +7,11 @@ const nextConfig = {
     },
     // Cloudflare tunnel uchun
     allowedDevOrigins: [
+        'repeated-vincent-wall-funeral.trycloudflare.com',
+        'production-italic-writers-standards.trycloudflare.com',
+        'dive-requiring-suffered-pads.trycloudflare.com',
+        'let-unlock-speak-occupation.trycloudflare.com',
+        'protein-focal-nominations-rolls.trycloudflare.com',
         'evening-chapter-smaller-needed.trycloudflare.com',
         'chosen-undertaken-joined-forestry.trycloudflare.com',
         'usgs-pda-friendly-until.trycloudflare.com',

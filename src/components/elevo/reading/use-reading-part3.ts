@@ -2,23 +2,23 @@
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import {
-  getReadingPart2Question,
-  evaluateReadingPart2,
-  type ReadingPart2QuestionResponse,
-  type ReadingPart2EvaluateResponse,
+  getReadingPart3Question,
+  evaluateReadingPart3,
+  type ReadingPart3QuestionResponse,
+  type ReadingPart3EvaluateResponse,
 } from "@/lib/api/reading"
 
 const TIMER_DURATION = 10 * 60
 
-export function useReadingPart2() {
+export function useReadingPart3() {
   const [loading, setLoading]           = useState(true)
   const [submitting, setSubmitting]     = useState(false)
-  const [questionData, setQuestionData] = useState<ReadingPart2QuestionResponse | null>(null)
+  const [questionData, setQuestionData] = useState<ReadingPart3QuestionResponse | null>(null)
   const [matches, setMatches]           = useState<Record<number, number>>({})
-  const [result, setResult]             = useState<ReadingPart2EvaluateResponse | null>(null)
+  const [result, setResult]             = useState<ReadingPart3EvaluateResponse | null>(null)
   const [timeLeft, setTimeLeft]         = useState(TIMER_DURATION)
 
-  const questionDataRef = useRef<ReadingPart2QuestionResponse | null>(null)
+  const questionDataRef = useRef<ReadingPart3QuestionResponse | null>(null)
   const matchesRef      = useRef<Record<number, number>>({})
   const timerRef        = useRef<ReturnType<typeof setInterval> | null>(null)
   const submittingRef   = useRef(false)
@@ -37,16 +37,16 @@ export function useReadingPart2() {
 
     try {
       // Backend expects: { question_id, answer_question_id }
-      // m = { passage_id: question_id }
-      // Backend'da: question = A-J (10 ta), answer/passage = 1-8 (8 ta)
-      const matchesArray = Object.entries(m).map(([passageId, questionId]) => ({
-        question_id: questionId,        // A-J question
-        answer_question_id: parseInt(passageId),  // 1-8 passage
+      // m = { paragraph_id: heading_id }
+      // Backend'da: question = paragraphs (6 ta), answer/headings = headings (8 ta)
+      const matchesArray = Object.entries(m).map(([paragraphId, headingId]) => ({
+        question_id: parseInt(paragraphId),  // Paragraph (6 ta)
+        answer_question_id: headingId,        // Heading (8 ta)
       }))
-      const response = await evaluateReadingPart2({ exam_id: qd.exam_id, matches: matchesArray })
+      const response = await evaluateReadingPart3({ exam_id: qd.exam_id, matches: matchesArray })
       setResult(response)
     } catch (err) {
-      console.error("evaluate part2 failed:", err)
+      console.error("evaluate part3 failed:", err)
     } finally {
       setSubmitting(false)
     }
@@ -55,10 +55,10 @@ export function useReadingPart2() {
   const handleSubmitRef = useRef(handleSubmit)
   useEffect(() => { handleSubmitRef.current = handleSubmit }, [handleSubmit])
 
-  const handleSelect = useCallback((passageId: number, questionId: number) => {
+  const handleSelect = useCallback((paragraphId: number, headingId: number) => {
     setMatches((prev) => {
-      if (prev[passageId] === questionId) return prev
-      return { ...prev, [passageId]: questionId }
+      if (prev[paragraphId] === headingId) return prev
+      return { ...prev, [paragraphId]: headingId }
     })
   }, [])
 
@@ -71,11 +71,11 @@ export function useReadingPart2() {
     
     ;(async () => {
       try {
-        const data = await getReadingPart2Question()
+        const data = await getReadingPart3Question()
         setQuestionData(data)
         setTimeLeft(TIMER_DURATION)
       } catch (err) {
-        console.error("load part2 failed:", err)
+        console.error("load part3 failed:", err)
       } finally {
         setLoading(false)
       }
@@ -102,9 +102,9 @@ export function useReadingPart2() {
     return `${m}:${s.toString().padStart(2, "0")}`
   }
 
-  const questions       = questionData?.set.questions ?? []
-  const passages        = questionData?.set.answers ?? []
-  const allMatched      = passages.length > 0 && passages.every((p) => matches[p.id] !== undefined)
+  const paragraphs      = questionData?.set.questions ?? []
+  const headings        = questionData?.set.answers ?? []
+  const allMatched      = paragraphs.length > 0 && paragraphs.every((p) => matches[p.id] !== undefined)
 
   return {
     loading, submitting, questionData,
