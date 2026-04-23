@@ -85,6 +85,7 @@ export function ReadingPart4Content() {
               answers={answers}
               onSelect={handleSelect}
               disabled={!!result || submitting}
+              startNumber={mcqQuestions.length + 1}  // 5 dan boshlanadi
             />
           )}
 

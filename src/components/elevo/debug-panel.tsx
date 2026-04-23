@@ -98,6 +98,15 @@ export function DebugPanel() {
           </code>
         </div>
 
+        {hasToken && (
+          <div>
+            <span className="font-bold">Access Token (to'liq):</span>
+            <code className="block bg-background p-2 rounded mt-1 text-warning text-[10px] break-all select-all">
+              {getAccessToken()}
+            </code>
+          </div>
+        )}
+
         <div>
           <span className="font-bold">Backend Aloqa:</span>
           <code className="block bg-background p-2 rounded mt-1 text-primary">{backendStatus}</code>

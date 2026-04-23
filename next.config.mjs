@@ -27,6 +27,10 @@ const nextConfig = {
         'collar-waiting-commission-stats.trycloudflare.com',
         'width-entrance-daily-hamilton.trycloudflare.com',
         'gloves-converter-samuel-throwing.trycloudflare.com',
+        'hardware-gives-generate-doors.trycloudflare.com',
+        'referral-acc-moisture-instructions.trycloudflare.com',
+        'member-directed-database-belief.trycloudflare.com',
+        'https://basic-height-packs-sentences.trycloudflare.com/'
     ],
 };
 

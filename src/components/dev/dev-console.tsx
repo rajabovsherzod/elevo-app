@@ -16,6 +16,52 @@ export function DevConsole() {
   const [isOpen, setIsOpen] = useState(false)
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [isMinimized, setIsMinimized] = useState(false)
+  const [apiUrl, setApiUrl] = useState('/api/multilevel/listening/part1/question/')
+  const [isTesting, setIsTesting] = useState(false)
+
+  const addLog = (type: LogEntry['type'], message: string, data?: any) => {
+    setLogs((prev) => [
+      ...prev.slice(-99),
+      {
+        id: Date.now(),
+        type,
+        message,
+        timestamp: new Date(),
+        data,
+      },
+    ])
+  }
+
+  const testApi = async () => {
+    if (!apiUrl) return
+    setIsTesting(true)
+    addLog('info', `🧪 Testing: ${apiUrl}`)
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('elevo_access') : null
+      
+      addLog('log', `📡 URL: ${process.env.NEXT_PUBLIC_API_URL}${apiUrl}`)
+      addLog('log', `🔑 Token: ${token ? '✅ Mavjud' : '❌ Yo\'q'}`)
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${apiUrl}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Cache-Control': 'no-cache',
+        },
+      })
+
+      addLog('log', `📊 Response Status: ${response.status} ${response.statusText}`)
+      
+      const data = await response.json()
+      addLog('log', `✅ SUCCESS!`, data)
+    } catch (error: any) {
+      addLog('error', `❌ FAILED: ${error?.message || 'Unknown error'}`)
+      addLog('error', `💡 TIP: ${error?.code === 'ERR_NETWORK' ? 'CORS yoki Network muammosi' : 'Boshqa xato'}`)
+    } finally {
+      setIsTesting(false)
+    }
+  }
 
   useEffect(() => {
     // Intercept console methods
@@ -185,6 +231,29 @@ export function DevConsole() {
                 </button>
               </div>
             </div>
+
+            {/* API Test Section */}
+            {!isMinimized && (
+              <div className="px-4 py-3 bg-gray-850 border-b border-gray-700">
+                <div className="text-xs text-gray-400 mb-2 font-bold">🧪 API TEST</div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={apiUrl}
+                    onChange={(e) => setApiUrl(e.target.value)}
+                    className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-indigo-500"
+                    placeholder="/api/multilevel/listening/part1/question/"
+                  />
+                  <button
+                    onClick={testApi}
+                    disabled={isTesting}
+                    className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition-colors"
+                  >
+                    {isTesting ? '⏳ Testing...' : '🚀 Test'}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Logs */}
             {!isMinimized && (
