@@ -82,7 +82,7 @@ export function ListeningPart1Result({ result, questions, audioUrl }: Props) {
     <div className="flex flex-col gap-4 animate-fade-in">
 
       {/* ── Score card ── */}
-      <div className="elevo-card p-6">
+      <div className="elevo-card elevo-card-border p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-0.5">
@@ -110,78 +110,61 @@ export function ListeningPart1Result({ result, questions, audioUrl }: Props) {
         </div>
       </div>
 
-      {/* ── Question results grid (no separators) ── */}
-      <div className="elevo-card p-4">
-        <div className="grid grid-cols-4 gap-2">
-          {result.details.map((d, i) => (
-            <div
-              key={d.question_id}
-              className="flex flex-col items-center gap-1.5 py-2.5"
-            >
-              <span className="text-[10px] font-black text-on-surface-variant">Q{i + 1}</span>
-              {d.correct
-                ? <CheckCircle2 className="w-5 h-5 text-green-500" />
-                : <XCircle      className="w-5 h-5 text-error" />
-              }
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* ── Answer review ── */}
-      <div className="elevo-card overflow-hidden">
+      <div className="elevo-card elevo-card-border overflow-hidden">
         <div className="px-4 py-3 bg-primary/10">
           <p className="text-[10px] font-black uppercase tracking-widest text-primary">
             Answer Review
           </p>
         </div>
-        <div className="flex flex-col gap-2 p-3">
-          {result.details.map((d, i) => {
-            const question  = questions.find(q => q.id === d.question_id)
-            const isCorrect = d.correct
+        <div className="p-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {result.details.map((d, i) => {
+              const question  = questions.find(q => q.id === d.question_id)
+              const isCorrect = d.correct
 
-            return (
-              <div
-                key={d.question_id}
-                className="flex items-start gap-3 px-4 py-3.5 rounded-xl"
-              >
-                <span className="w-7 h-7 rounded-lg text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 bg-indigo-500 text-white shadow-sm">
-                  {i + 1}
-                </span>
+              return (
+                <div
+                  key={d.question_id}
+                  className="flex flex-col gap-2 p-3 rounded-xl bg-surface-container/50 border border-outline-variant"
+                >
+                  {/* Question number + status */}
+                  <div className="flex items-center justify-between">
+                    <span className="w-6 h-6 rounded-lg text-[11px] font-black flex items-center justify-center bg-indigo-500 text-white shadow-sm">
+                      {i + 1}
+                    </span>
+                    {isCorrect
+                      ? <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      : <XCircle      className="w-4 h-4 text-error" />
+                    }
+                  </div>
 
-                <div className="flex-1 min-w-0">
+                  {/* Question text */}
                   {question?.question && (
-                    <p className="text-xs text-on-surface-variant mb-2 leading-relaxed">
+                    <p className="text-[11px] text-on-surface-variant leading-relaxed line-clamp-2">
                       {question.question}
                     </p>
                   )}
+
+                  {/* Answer */}
                   {isCorrect ? (
-                    <div className="flex items-center gap-2">
-                      <span className="px-3 h-7 rounded-lg bg-green-500 text-white text-xs font-bold flex items-center shadow-sm">
-                        {d.user_answer_text ?? "—"}
-                      </span>
-                      <span className="text-xs font-bold text-green-600">Correct</span>
-                    </div>
+                    <span className="text-[11px] font-bold text-green-600 truncate">
+                      {d.user_answer_text ?? "—"}
+                    </span>
                   ) : (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-3 h-7 rounded-lg bg-red-500/10 text-error text-xs font-bold flex items-center line-through opacity-70 border border-red-500/20">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[11px] font-bold text-error line-through opacity-70 truncate">
                         {d.user_answer_text ?? "—"}
                       </span>
-                      <span className="text-on-surface-variant text-xs">→</span>
-                      <span className="px-3 h-7 rounded-lg bg-green-500 text-white text-xs font-bold flex items-center shadow-sm">
+                      <span className="text-[11px] font-bold text-green-600 truncate">
                         {d.correct_answer_text ?? "—"}
                       </span>
                     </div>
                   )}
                 </div>
-
-                {isCorrect
-                  ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-1" />
-                  : <XCircle      className="w-5 h-5 text-error shrink-0 mt-1" />
-                }
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
 
@@ -200,7 +183,7 @@ export function ListeningPart1Result({ result, questions, audioUrl }: Props) {
               open={audioOpen}
               onToggle={() => setAudioOpen(p => !p)}
             >
-              <div className="px-4 pb-4 pt-2">
+              <div className="px-4 pt-8 pb-4 pt-2">
                 <ListeningPart1AudioPlayer src={audioUrl} />
               </div>
             </AccordionRow>

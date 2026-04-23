@@ -3,6 +3,7 @@
 import { useRef } from "react"
 import { Plyr } from "plyr-react"
 import "plyr-react/plyr.css"
+import "./listening-part1-audio-player.css"
 
 interface Props {
   src: string

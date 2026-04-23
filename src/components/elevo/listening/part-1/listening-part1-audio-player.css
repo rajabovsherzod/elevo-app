@@ -1,0 +1,24 @@
+/* Plyr play button - always indigo, white icon, no hover change */
+.plyr__controls__item.plyr__control--overlaid,
+.plyr__control {
+  background: #4f46e5 !important; /* indigo-600 */
+  color: #ffffff !important;
+}
+
+.plyr__controls__item.plyr__control--overlaid:hover,
+.plyr__control:hover {
+  background: #4f46e5 !important; /* indigo-600 */
+  color: #ffffff !important;
+}
+
+.plyr__controls__item.plyr__control--overlaid svg,
+.plyr__control svg {
+  fill: #ffffff !important;
+  color: #ffffff !important;
+}
+
+.plyr__controls__item.plyr__control--overlaid:hover svg,
+.plyr__control:hover svg {
+  fill: #ffffff !important;
+  color: #ffffff !important;
+}
