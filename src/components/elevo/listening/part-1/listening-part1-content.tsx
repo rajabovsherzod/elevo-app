@@ -1,12 +1,11 @@
 "use client"
 
-import { useState, useCallback }  from "react"
-import { Button }                  from "@/components/base/buttons/button"
-import { PageHeaderWithBack }      from "@/components/elevo/shared/page-header-with-back"
-import { ExamLoading }             from "@/components/elevo/shared/exam-loading"
-import { ListeningPart1Mcq }       from "./listening-part1-mcq"
-import { ListeningPart1Result }    from "./listening-part1-result"
-import { useListeningPart1, type ListeningPhase } from "./use-listening-part1"
+import { Button }             from "@/components/base/buttons/button"
+import { PageHeaderWithBack } from "@/components/elevo/shared/page-header-with-back"
+import { ExamLoading }        from "@/components/elevo/shared/exam-loading"
+import { ListeningPart1Mcq }  from "./listening-part1-mcq"
+import { ListeningPart1Result } from "./listening-part1-result"
+import { useListeningPart1 }  from "./use-listening-part1"
 
 // ── Audio waveform indicator ───────────────────────────────────────────────────
 function AudioBar({ isPlaying, label }: { isPlaying: boolean; label: string }) {
@@ -31,15 +30,40 @@ function AudioBar({ isPlaying, label }: { isPlaying: boolean; label: string }) {
   )
 }
 
-// ── Floating hint pill ─────────────────────────────────────────────────────────
-function HintPill({ visible }: { visible: boolean }) {
+// ── Loading block ──────────────────────────────────────────────────────────────
+function LoadingBlock() {
   return (
-    <div
-      className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-on-surface text-surface text-xs font-semibold shadow-lg transition-all duration-300 pointer-events-none whitespace-nowrap ${
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-      }`}
-    >
-      Audio tugagandan keyin belgilay olasiz
+    <div className="flex flex-col gap-5 pb-6">
+      <PageHeaderWithBack title="Part 1 — Short Conversations" />
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <ExamLoading />
+      </div>
+    </div>
+  )
+}
+
+// ── Error block ────────────────────────────────────────────────────────────────
+function ErrorBlock({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="flex flex-col gap-5 pb-6">
+      <PageHeaderWithBack title="Part 1 — Short Conversations" />
+      <div className="elevo-card elevo-card-border p-8 flex flex-col items-center text-center gap-4">
+        <div className="w-12 h-12 rounded-2xl bg-error/10 flex items-center justify-center">
+          <span className="text-error text-xl">!</span>
+        </div>
+        <div>
+          <p className="text-sm font-bold text-on-surface mb-1">Yuklashda xatolik</p>
+          <p className="text-xs text-on-surface-variant">{message}</p>
+        </div>
+        <div className="flex gap-3">
+          <Button size="sm" color="secondary" onClick={() => window.location.reload()}>
+            Sahifani yangilash
+          </Button>
+          <Button size="sm" color="primary" onClick={onRetry}>
+            Qayta urinish
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -53,55 +77,27 @@ export function ListeningPart1Content() {
     answers,
     result,
     isAudioPlaying,
-    error,
+    errorMsg,
     totalAnswered,
     selectAnswer,
     submit,
+    retry,
   } = useListeningPart1()
 
-  const [hintVisible, setHintVisible] = useState(false)
+  // ── Phase: loading ───────────────────────────────────────────────────────────
+  if (phase === "loading") return <LoadingBlock />
 
-  const showHint = useCallback(() => {
-    setHintVisible(true)
-    setTimeout(() => setHintVisible(false), 2000)
-  }, [])
-
-  const instructionOnly = phase === "instruction"
-  const canAnswer       = phase === "question-audio" || phase === "exam" || phase === "submitting"
-  const canSubmit       = phase === "exam"
-
-  // Loading
-  if (phase === "loading") {
+  // ── Phase: error ─────────────────────────────────────────────────────────────
+  if (phase === "error") {
     return (
-      <div className="flex flex-col gap-5 pb-6">
-        <PageHeaderWithBack title="Part 1 — Short Conversations" />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <ExamLoading />
-        </div>
-      </div>
+      <ErrorBlock
+        message={errorMsg ?? "Noma'lum xatolik. Qayta urinib ko'ring."}
+        onRetry={retry}
+      />
     )
   }
 
-  // Error - show even if questions loaded partially
-  if (error) {
-    return (
-      <div className="flex flex-col gap-5 pb-6">
-        <PageHeaderWithBack title="Part 1 — Short Conversations" />
-        <div className="elevo-card elevo-card-border p-8 text-center">
-          <p className="text-error text-sm font-medium">{error}</p>
-          <p className="text-on-surface-variant text-xs mt-2">Sahifani yangilab qayta urinib ko'ring</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Sahifani yangilash
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // Result
+  // ── Phase: result ────────────────────────────────────────────────────────────
   if (phase === "result" && result) {
     return (
       <div className="flex flex-col gap-5 pb-6">
@@ -111,12 +107,16 @@ export function ListeningPart1Content() {
     )
   }
 
+  // ── Phases: instruction / question-audio / exam / submitting ─────────────────
+  const instructionOnly = phase === "instruction"
+  const canAnswer       = phase === "question-audio" || phase === "exam" || phase === "submitting"
+  const canSubmit       = phase === "exam"
+
   return (
     <div className="flex flex-col gap-4 pb-6">
-      {/* Header */}
       <PageHeaderWithBack title="Part 1 — Short Conversations" />
 
-      {/* Instructions */}
+      {/* Static instructions */}
       <div className="elevo-card elevo-card-border px-4 py-3">
         <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1">
           Instructions
@@ -127,7 +127,7 @@ export function ListeningPart1Content() {
         </p>
       </div>
 
-      {/* Audio status bar */}
+      {/* Audio status — shown while audio is playing */}
       {(phase === "instruction" || phase === "question-audio") && (
         <AudioBar
           isPlaying={isAudioPlaying}
@@ -135,7 +135,7 @@ export function ListeningPart1Content() {
         />
       )}
 
-      {/* Progress — exam phase */}
+      {/* Progress bar — shown during answer phase */}
       {canAnswer && questions.length > 0 && (
         <div className="elevo-card elevo-card-border px-4 py-3 flex flex-col gap-2">
           <div className="flex justify-between">
@@ -155,34 +155,25 @@ export function ListeningPart1Content() {
         </div>
       )}
 
-      {/* Questions */}
+      {/* Question cards */}
       {questions.length > 0 && (
-        <>
-          {/* Instruction phase: invisible overlay captures taps and shows hint */}
-          <div className="relative">
-            <div className="flex flex-col gap-4">
-              {questions.map((question, index) => (
-                <ListeningPart1Mcq
-                  key={question.id}
-                  question={question}
-                  questionNumber={index + 1}
-                  selectedAnswerId={answers[question.id]}
-                  onSelect={canAnswer ? selectAnswer : undefined}
-                />
-              ))}
-            </div>
-
-            {instructionOnly && (
-              <div
-                className="absolute inset-0 z-10 cursor-not-allowed"
-                onClick={showHint}
+        <div className="relative">
+          <div className="flex flex-col gap-4">
+            {questions.map((question, index) => (
+              <ListeningPart1Mcq
+                key={question.id}
+                question={question}
+                questionNumber={index + 1}
+                selectedAnswerId={answers[question.id]}
+                onSelect={selectAnswer}
+                isLocked={instructionOnly}
               />
-            )}
+            ))}
           </div>
-        </>
+        </div>
       )}
 
-      {/* Submit */}
+      {/* Submit button */}
       {(canSubmit || phase === "submitting") && questions.length > 0 && (
         <div className="flex justify-end pt-2">
           <Button
@@ -196,9 +187,6 @@ export function ListeningPart1Content() {
           </Button>
         </div>
       )}
-
-      {/* Hint pill */}
-      <HintPill visible={hintVisible} />
     </div>
   )
 }

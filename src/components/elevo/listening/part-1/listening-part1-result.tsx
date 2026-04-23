@@ -177,11 +177,10 @@ export function ListeningPart1Result({ result, questions, audioUrl }: Props) {
     if (!el) return
     el.style.transition = "none"
     el.style.width = "0%"
-    el.getBoundingClientRect()
+    el.getBoundingClientRect() // force reflow — starts animation from 0
     el.style.transition = "width 1s cubic-bezier(0.34,1.2,0.64,1)"
     el.style.width = `${scorePercent}%`
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [scorePercent])
 
   return (
     <div className="flex flex-col gap-4 animate-fade-in">

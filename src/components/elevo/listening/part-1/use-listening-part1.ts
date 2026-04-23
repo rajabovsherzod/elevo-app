@@ -15,111 +15,131 @@ export type ListeningPhase =
   | "exam"
   | "submitting"
   | "result"
+  | "error"
+
+const LOAD_TIMEOUT_MS = 30_000
+const API_BASE = () =>
+  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "")
+
+function fixAudioUrl(raw: string | null): string {
+  if (!raw) return ""
+  try {
+    return API_BASE() + new URL(raw).pathname
+  } catch {
+    return raw
+  }
+}
+
+function groupQuestions(
+  raw: ListeningPart1Question,
+  audioUrl: string
+): ListeningPart1Question[] {
+  if (raw.answers.length <= 3) return [{ ...raw, audio_url: audioUrl }]
+
+  const map = new Map<number, typeof raw.answers>()
+  raw.answers.forEach(a => {
+    if (!map.has(a.position)) map.set(a.position, [])
+    map.get(a.position)!.push(a)
+  })
+
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([position, posAnswers]) => ({
+      id: raw.id * 1000 + position,
+      title: raw.title,
+      instruction: raw.instruction,
+      question: `Question ${position}`,
+      audio_url: audioUrl,
+      answers: posAnswers,
+    }))
+}
 
 export function useListeningPart1() {
-  const [phase, setPhase]               = useState<ListeningPhase>("loading")
-  const [questions, setQuestions]       = useState<ListeningPart1Question[]>([])
-  const [examId, setExamId]             = useState<number | null>(null)
-  const [answers, setAnswers]           = useState<Record<number, number>>({})
-  const [result, setResult]             = useState<ListeningPart1EvaluateResponse | null>(null)
+  const [phase, setPhase]       = useState<ListeningPhase>("loading")
+  const [questions, setQuestions] = useState<ListeningPart1Question[]>([])
+  const [errorMsg, setErrorMsg]   = useState<string | null>(null)
+  const [answers, setAnswers]     = useState<Record<number, number>>({})
+  const [result, setResult]       = useState<ListeningPart1EvaluateResponse | null>(null)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
-  const [error, setError]               = useState<string | null>(null)
+  const [retryKey, setRetryKey]   = useState(0)
 
-  const audioRef      = useRef<HTMLAudioElement | null>(null)
-  const examIdRef     = useRef<number | null>(null)
+  const audioRef   = useRef<HTMLAudioElement | null>(null)
+  const examIdRef  = useRef<number | null>(null)
 
-  useEffect(() => { examIdRef.current = examId }, [examId])
+  // ── Audio helpers ────────────────────────────────────────────────────────────
 
   const stopAudio = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current.src = ""
+    const audio = audioRef.current
+    if (audio) {
+      audio.pause()
+      audio.src = ""
       audioRef.current = null
     }
     setIsAudioPlaying(false)
   }, [])
 
-  const playAudio = useCallback((src: string, onEnd?: () => void) => {
-    stopAudio()
-    const audio = new Audio(src)
-    audioRef.current = audio
-    setIsAudioPlaying(true)
+  const playAudio = useCallback(
+    (src: string, onEnd?: () => void) => {
+      stopAudio()
+      const audio = new Audio(src)
+      audioRef.current = audio
+      setIsAudioPlaying(true)
 
-    // done flag — error event + .catch() ikkalasi ham otishi mumkin, faqat bir marta chaqiramiz
-    let done = false
-    const finish = () => {
-      if (done) return
-      done = true
-      setIsAudioPlaying(false)
-      onEnd?.()
-    }
+      let done = false
+      const finish = () => {
+        if (done) return
+        done = true
+        audio.removeEventListener("ended", finish)
+        audio.removeEventListener("error", finish)
+        setIsAudioPlaying(false)
+        onEnd?.()
+      }
 
-    audio.addEventListener("ended", finish)
-    audio.addEventListener("error", finish)
-    audio.play().catch((e) => {
-      console.warn('Audio play failed:', e)
-      finish()
-    })
-  }, [stopAudio])
+      audio.addEventListener("ended", finish)
+      audio.addEventListener("error", finish)
+      audio.play().catch(e => {
+        console.warn("Audio play failed:", e)
+        finish()
+      })
+    },
+    [stopAudio]
+  )
 
-  // Fetch fresh data on every mount
+  // ── Main fetch — reruns on retry ─────────────────────────────────────────────
+
   useEffect(() => {
     setPhase("loading")
     setQuestions([])
     setAnswers({})
     setResult(null)
-    setError(null)
+    setErrorMsg(null)
+    examIdRef.current = null
 
     let cancelled = false
+
+    // Timeout guard — prevents infinite loading if API hangs
+    const timeout = setTimeout(() => {
+      if (!cancelled) {
+        cancelled = true
+        stopAudio()
+        setErrorMsg("So'rov juda uzoq davom etdi. Internet aloqasini tekshiring.")
+        setPhase("error")
+      }
+    }, LOAD_TIMEOUT_MS)
 
     ;(async () => {
       try {
         const data = await getListeningPart1Questions()
         if (cancelled) return
 
-        const rawQuestion = data.question
+        const audioUrl = fixAudioUrl(data.question.audio_url)
+        const transformed = groupQuestions(data.question, audioUrl)
 
-        // audio_url backenddan localhost:8000/media/... keladi.
-        // Tunnel orqali ishlash uchun NEXT_PUBLIC_API_URL ga almashtiramiz.
-        let audioUrl = rawQuestion.audio_url
-        if (audioUrl) {
-          try {
-            const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "")
-            const parsed = new URL(audioUrl)
-            audioUrl = apiBase + parsed.pathname
-          } catch (e) {
-            console.warn('Audio URL parse error:', e)
-            // URL parse xatosi bo'lsa asl URL ni ishlatamiz
-          }
-        }
-
-        // Group answers by position → one question per position
-        let transformed: ListeningPart1Question[]
-        if (rawQuestion.answers.length > 3) {
-          const map = new Map<number, typeof rawQuestion.answers>()
-          rawQuestion.answers.forEach(a => {
-            if (!map.has(a.position)) map.set(a.position, [])
-            map.get(a.position)!.push(a)
-          })
-          transformed = Array.from(map.entries())
-            .sort(([a], [b]) => a - b)
-            .map(([position, posAnswers]) => ({
-              id: rawQuestion.id * 1000 + position,
-              title: rawQuestion.title,
-              instruction: rawQuestion.instruction,
-              question: `Question ${position}`,
-              audio_url: audioUrl,
-              answers: posAnswers,
-            }))
-        } else {
-          transformed = [{ ...rawQuestion, audio_url: audioUrl }]
-        }
-
+        examIdRef.current = data.exam_id
         setQuestions(transformed)
-        setExamId(data.exam_id)
         setPhase("instruction")
 
-        // 1. Instruction audio → 2. Question audio → 3. Exam
+        // Audio chain: instruction jingle → question audio → exam
         playAudio("/sounds/listening-part1.mp3", () => {
           if (cancelled) return
           if (audioUrl) {
@@ -132,21 +152,24 @@ export function useListeningPart1() {
           }
         })
       } catch (err: any) {
-        if (!cancelled) {
-          const errorMsg = "Savollarni yuklashda xatolik: " + (err?.message ?? "Unknown error")
-          console.error('Listening Part 1 fetch error:', err)
-          setError(errorMsg)
-          setPhase("exam") // Fallback to exam phase so error UI shows
-        }
+        if (cancelled) return
+        setErrorMsg(err?.message ?? "Noma'lum xatolik")
+        setPhase("error")
+      } finally {
+        clearTimeout(timeout)
       }
     })()
 
     return () => {
       cancelled = true
+      clearTimeout(timeout)
       stopAudio()
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [retryKey, stopAudio, playAudio])
+
+  // ── Actions ──────────────────────────────────────────────────────────────────
+
+  const retry = useCallback(() => setRetryKey(k => k + 1), [])
 
   const selectAnswer = useCallback((questionId: number, answerId: number) => {
     setAnswers(prev => ({ ...prev, [questionId]: answerId }))
@@ -168,25 +191,22 @@ export function useListeningPart1() {
       setResult(res)
       setPhase("result")
     } catch (err: any) {
-      console.error('Submit error:', err)
-      setError("Natijani yuborishda xatolik: " + (err?.message ?? "Unknown error"))
-      setPhase("exam")
+      setErrorMsg(err?.message ?? "Noma'lum xatolik")
+      setPhase("error")
     }
   }, [answers, stopAudio])
-
-  const totalAnswered = Object.keys(answers).length
-  const audioUrl = questions[0]?.audio_url ?? null
 
   return {
     phase,
     questions,
-    audioUrl,
+    audioUrl: questions[0]?.audio_url ?? null,
     answers,
     result,
     isAudioPlaying,
-    error,
-    totalAnswered,
+    errorMsg,
+    totalAnswered: Object.keys(answers).length,
     selectAnswer,
     submit,
+    retry,
   }
 }
