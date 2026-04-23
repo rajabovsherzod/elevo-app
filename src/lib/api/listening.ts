@@ -21,7 +21,7 @@ export interface ListeningPart1Question {
 export interface ListeningPart1QuestionsResponse {
   exam_id: number
   part: number
-  question: ListeningPart1Question
+  question: ListeningPart1Question | ListeningPart1Question[]
 }
 
 export interface ListeningPart1SubmitAnswer {

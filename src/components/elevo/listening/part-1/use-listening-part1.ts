@@ -132,8 +132,12 @@ export function useListeningPart1() {
         const data = await getListeningPart1Questions()
         if (cancelled) return
 
-        const audioUrl = fixAudioUrl(data.question.audio_url)
-        const transformed = groupQuestions(data.question, audioUrl)
+        // Handle both single question and array of questions
+        const questions = Array.isArray(data.question) ? data.question : [data.question]
+        const audioUrl = fixAudioUrl(questions[0]?.audio_url ?? null)
+        
+        // Transform each question
+        const transformed = questions.flatMap(q => groupQuestions(q, audioUrl))
 
         examIdRef.current = data.exam_id
         setQuestions(transformed)
