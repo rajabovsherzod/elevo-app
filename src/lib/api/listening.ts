@@ -21,7 +21,7 @@ export interface ListeningPart1Question {
 export interface ListeningPart1QuestionsResponse {
   exam_id: number
   part: number
-  questions: ListeningPart1Question[]
+  question: ListeningPart1Question
 }
 
 export interface ListeningPart1SubmitAnswer {
@@ -38,6 +38,9 @@ export interface ListeningPart1AnswerDetail {
   question_id: number
   answer_id: number
   correct: boolean
+  user_answer_text: string | null
+  correct_answer_id: number | null
+  correct_answer_text: string | null
 }
 
 export interface ListeningPart1EvaluateResponse {
@@ -53,30 +56,13 @@ export async function getListeningPart1Questions(
   examId?: number
 ): Promise<ListeningPart1QuestionsResponse> {
   const params: Record<string, unknown> = examId ? { exam_id: examId } : {}
+  params._t = Date.now()
   
-  console.log('🔍 [LISTENING API] Fetching questions...')
-  console.log('🔍 [LISTENING API] Endpoint:', ENDPOINTS.listening.part(1).question)
-  console.log('🔍 [LISTENING API] Params:', params)
-  
-  try {
-    const { data } = await apiClient.get<ListeningPart1QuestionsResponse>(
-      ENDPOINTS.listening.part(1).question,
-      { params }
-    )
-    console.log('✅ [LISTENING API] Success! Questions:', data.questions.length)
-    return data
-  } catch (error: any) {
-    console.error('❌ [LISTENING API] FAILED!')
-    console.error('❌ Error:', error.message)
-    console.error('❌ Code:', error.code)
-    if (error.response) {
-      console.error('❌ Response:', error.response.status, error.response.data)
-    } else if (error.request) {
-      console.error('❌ No response - Network/CORS/Tunnel issue')
-      console.error('❌ Request URL:', error.config?.baseURL + error.config?.url)
-    }
-    throw error
-  }
+  const { data } = await apiClient.get<ListeningPart1QuestionsResponse>(
+    ENDPOINTS.listening.part(1).question,
+    { params }
+  )
+  return data
 }
 
 export async function evaluateListeningPart1(

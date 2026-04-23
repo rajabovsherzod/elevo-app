@@ -1,5 +1,5 @@
 import { cx } from "@/utils/cx"
-import type { ReadingPart5EvaluateResponse, ReadingPart5GapFilling } from "@/lib/api/reading-part5"
+import type { ReadingPart5EvaluateResponse } from "@/lib/api/reading-part5"
 
 interface GapInputProps {
   position: number
@@ -44,7 +44,7 @@ function GapInput({ position, value, onChange, disabled, result }: GapInputProps
 
 interface ReadingPart5GapFillingProps {
   summaryText: string
-  gapFillings: ReadingPart5GapFilling[]
+  gapFillings: { position: number }[]
   answers: Record<number, string>
   onAnswerChange: (pos: number, val: string) => void
   disabled: boolean

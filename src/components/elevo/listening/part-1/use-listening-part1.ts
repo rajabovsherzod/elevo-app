@@ -8,24 +8,27 @@ import {
   type ListeningPart1EvaluateResponse,
 } from "@/lib/api/listening"
 
-export type ListeningPhase = "loading" | "instruction" | "exam" | "submitting" | "result"
+export type ListeningPhase =
+  | "loading"
+  | "instruction"
+  | "question-audio"
+  | "exam"
+  | "submitting"
+  | "result"
 
 export function useListeningPart1() {
-  const [phase, setPhase] = useState<ListeningPhase>("loading")
-  const [questions, setQuestions] = useState<ListeningPart1Question[]>([])
-  const [examId, setExamId] = useState<number | null>(null)
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [answers, setAnswers] = useState<Record<number, number>>({}) // questionId → answerId
-  const [result, setResult] = useState<ListeningPart1EvaluateResponse | null>(null)
+  const [phase, setPhase]               = useState<ListeningPhase>("loading")
+  const [questions, setQuestions]       = useState<ListeningPart1Question[]>([])
+  const [examId, setExamId]             = useState<number | null>(null)
+  const [answers, setAnswers]           = useState<Record<number, number>>({})
+  const [result, setResult]             = useState<ListeningPart1EvaluateResponse | null>(null)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError]               = useState<string | null>(null)
 
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const examIdRef = useRef<number | null>(null)
-  const questionsRef = useRef<ListeningPart1Question[]>([])
+  const audioRef      = useRef<HTMLAudioElement | null>(null)
+  const examIdRef     = useRef<number | null>(null)
 
   useEffect(() => { examIdRef.current = examId }, [examId])
-  useEffect(() => { questionsRef.current = questions }, [questions])
 
   const stopAudio = useCallback(() => {
     if (audioRef.current) {
@@ -41,147 +44,113 @@ export function useListeningPart1() {
     const audio = new Audio(src)
     audioRef.current = audio
     setIsAudioPlaying(true)
-    audio.addEventListener("ended", () => {
+
+    // done flag — error event + .catch() ikkalasi ham otishi mumkin, faqat bir marta chaqiramiz
+    let done = false
+    const finish = () => {
+      if (done) return
+      done = true
       setIsAudioPlaying(false)
       onEnd?.()
-    })
-    audio.addEventListener("error", () => {
-      setIsAudioPlaying(false)
-      onEnd?.()
-    })
-    audio.play().catch(() => {
-      setIsAudioPlaying(false)
-      onEnd?.()
-    })
+    }
+
+    audio.addEventListener("ended", finish)
+    audio.addEventListener("error", finish)
+    audio.play().catch(finish)
   }, [stopAudio])
 
-  // Play question audio when index changes during exam phase
+  // Fetch fresh data on every mount
   useEffect(() => {
-    if (phase !== "exam" || questions.length === 0) return
-    const q = questions[currentIndex]
-    if (q?.audio_url) {
-      playAudio(q.audio_url)
-    }
-    return () => stopAudio()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, currentIndex])
+    setPhase("loading")
+    setQuestions([])
+    setAnswers({})
+    setResult(null)
+    setError(null)
 
-  // Fetch questions on mount, then play instruction audio
-  useEffect(() => {
+    let cancelled = false
+
     ;(async () => {
       try {
-        console.log('🔍 [LISTENING DEBUG] Starting fetch...')
-        console.log('🔍 [LISTENING DEBUG] API Base:', process.env.NEXT_PUBLIC_API_URL)
-        console.log('🔍 [LISTENING DEBUG] Token exists:', typeof window !== 'undefined' && !!localStorage.getItem('elevo_access'))
-        
         const data = await getListeningPart1Questions()
-        
-        console.log('✅ [LISTENING DEBUG] Success!')
-        console.log('=== LISTENING PART 1 DATA ===')
-        console.log('Exam ID:', data.exam_id)
-        console.log('Total questions:', data.questions.length)
-        
-        // Transform: 1 question with 24 answers → 8 questions with 3 answers each
-        let transformedQuestions = data.questions
-        if (data.questions.length === 1 && data.questions[0].answers.length > 3) {
-          const singleQuestion = data.questions[0]
-          const answers = singleQuestion.answers
-          
-          // Group answers by position
-          const positionMap = new Map<number, typeof answers>()
-          answers.forEach(answer => {
-            const pos = answer.position
-            if (!positionMap.has(pos)) {
-              positionMap.set(pos, [])
-            }
-            positionMap.get(pos)!.push(answer)
-          })
-          
-          // Fix audio_url: HTTP → HTTPS (mixed content fix)
-          let fixedAudioUrl = singleQuestion.audio_url
-          if (fixedAudioUrl && fixedAudioUrl.startsWith('http://')) {
-            fixedAudioUrl = fixedAudioUrl.replace('http://', 'https://')
+        if (cancelled) return
+
+        const rawQuestion = data.question
+
+        // audio_url backenddan localhost:8000/media/... keladi.
+        // Tunnel orqali ishlash uchun NEXT_PUBLIC_API_URL ga almashtiramiz.
+        let audioUrl = rawQuestion.audio_url
+        if (audioUrl) {
+          try {
+            const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "")
+            const path = new URL(audioUrl).pathname
+            audioUrl = apiBase + path
+          } catch {
+            // URL parse xatosi bo'lsa asl URL ni ishlatamiz
           }
-          
-          // Create 8 separate questions
-          transformedQuestions = Array.from(positionMap.entries())
-            .sort(([posA], [posB]) => posA - posB)
-            .map(([position, positionAnswers], index) => ({
-              id: singleQuestion.id * 1000 + position, // Unique ID for each question
-              title: singleQuestion.title,
-              instruction: singleQuestion.instruction,
-              question: `Question ${position}`,
-              audio_url: fixedAudioUrl, // Use HTTPS URL
-              answers: positionAnswers.map(a => ({
-                id: a.id,
-                position: a.position,
-                answer: a.answer
-              }))
-            }))
-          
-          console.log('Transformed to', transformedQuestions.length, 'questions')
-          console.log('Audio URL (fixed):', fixedAudioUrl)
         }
-        
-        data.questions.forEach((q, i) => {
-          console.log(`Question ${i + 1} (ID: ${q.id}):`, {
-            title: q.title,
-            question: q.question,
-            answers_count: q.answers.length,
-            answers: q.answers.map(a => ({ id: a.id, position: a.position, answer: a.answer }))
+
+        // Group answers by position → one question per position
+        let transformed: ListeningPart1Question[]
+        if (rawQuestion.answers.length > 3) {
+          const map = new Map<number, typeof rawQuestion.answers>()
+          rawQuestion.answers.forEach(a => {
+            if (!map.has(a.position)) map.set(a.position, [])
+            map.get(a.position)!.push(a)
           })
-        })
-        console.log('===========================')
-        
-        setQuestions(transformedQuestions)
-        setExamId(data.exam_id)
-        setError(null)
-        setPhase("instruction")
-        // Play instruction audio; when done → start exam
-        playAudio("/sounds/listening-part1.mp3", () => setPhase("exam"))
-      } catch (err: any) {
-        console.error('❌ [LISTENING DEBUG] FAILED!')
-        console.error('❌ Error type:', err?.constructor?.name)
-        console.error('❌ Error message:', err?.message)
-        console.error('❌ Error code:', err?.code)
-        
-        if (err?.config) {
-          console.error('❌ Request URL:', err.config.baseURL + err.config.url)
-          console.error('❌ Request method:', err.config.method?.toUpperCase())
-          console.error('❌ Has token:', !!err.config.headers?.Authorization)
-          console.error('❌ Request params:', err.config.params)
-        }
-        
-        if (err?.response) {
-          console.error('❌ Response status:', err.response.status)
-          console.error('❌ Response data:', err.response.data)
+          transformed = Array.from(map.entries())
+            .sort(([a], [b]) => a - b)
+            .map(([position, posAnswers]) => ({
+              id: rawQuestion.id * 1000 + position,
+              title: rawQuestion.title,
+              instruction: rawQuestion.instruction,
+              question: `Question ${position}`,
+              audio_url: audioUrl,
+              answers: posAnswers,
+            }))
         } else {
-          console.error('❌ No response received - Network/CORS/Timeout issue')
-          console.error('💡 TIP: Check if backend is running and CORS is configured')
+          transformed = [{ ...rawQuestion, audio_url: audioUrl }]
         }
-        
-        console.error('❌ Full error:', err)
-        setError('Savollarni yuklashda xatolik yuz berdi: ' + (err?.message || 'Unknown error'))
-        setPhase("exam") // fallback: skip instruction
+
+        setQuestions(transformed)
+        setExamId(data.exam_id)
+        setPhase("instruction")
+
+        // 1. Instruction audio → 2. Question audio → 3. Exam
+        playAudio("/sounds/listening-part1.mp3", () => {
+          if (cancelled) return
+          if (audioUrl) {
+            setPhase("question-audio")
+            playAudio(audioUrl, () => {
+              if (!cancelled) setPhase("exam")
+            })
+          } else {
+            setPhase("exam")
+          }
+        })
+      } catch (err: any) {
+        if (!cancelled) {
+          setError("Savollarni yuklashda xatolik: " + (err?.message ?? "Unknown error"))
+          setPhase("exam")
+        }
       }
     })()
-    return () => stopAudio()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    return () => {
+      cancelled = true
+      stopAudio()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const selectAnswer = useCallback((questionId: number, answerId: number) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: answerId }))
-  }, [])
-
-  const goNext = useCallback(() => {
-    setCurrentIndex((i) => i + 1)
+    setAnswers(prev => ({ ...prev, [questionId]: answerId }))
   }, [])
 
   const submit = useCallback(async () => {
     const eid = examIdRef.current
     if (!eid) return
-    setPhase("submitting")
     stopAudio()
+    setPhase("submitting")
     try {
       const res = await evaluateListeningPart1({
         exam_id: eid,
@@ -197,25 +166,19 @@ export function useListeningPart1() {
     }
   }, [answers, stopAudio])
 
-  const currentQuestion = questions[currentIndex] ?? null
-  const currentAnswerId = currentQuestion ? answers[currentQuestion.id] : undefined
-  const isLastQuestion = currentIndex === questions.length - 1
   const totalAnswered = Object.keys(answers).length
+  const audioUrl = questions[0]?.audio_url ?? null
 
   return {
     phase,
     questions,
-    currentIndex,
-    currentQuestion,
-    currentAnswerId,
+    audioUrl,
     answers,
-    isLastQuestion,
-    totalAnswered,
     result,
     isAudioPlaying,
     error,
+    totalAnswered,
     selectAnswer,
-    goNext,
     submit,
   }
 }

@@ -7,7 +7,7 @@ interface ListeningPart1McqProps {
   question: ListeningPart1Question
   questionNumber: number
   selectedAnswerId: number | undefined
-  onSelect: (questionId: number, answerId: number) => void
+  onSelect?: (questionId: number, answerId: number) => void
 }
 
 export function ListeningPart1Mcq({
@@ -40,7 +40,7 @@ export function ListeningPart1Mcq({
             <button
               key={answer.id}
               type="button"
-              onClick={() => onSelect(question.id, answer.id)}
+              onClick={() => onSelect?.(question.id, answer.id)}
               className={cx(
                 "w-full px-4 py-3 rounded-xl text-sm text-left transition-all duration-150",
                 "flex items-center gap-3 focus:outline-none",

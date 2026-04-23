@@ -3,10 +3,15 @@ import { ENDPOINTS } from "./endpoints"
 
 // ── Part 5 Types ──────────────────────────────────────────────────────────────
 
-export interface ReadingPart5GapFilling {
-  id: number
+export interface ReadingPart5GapFillingAnswer {
   position: number
   answer: string
+}
+
+export interface ReadingPart5GapFilling {
+  id: number
+  positions: number[]
+  answers: ReadingPart5GapFillingAnswer[]
 }
 
 export interface ReadingPart5MCQAnswer {
@@ -38,6 +43,7 @@ export interface ReadingPart5QuestionResponse {
 }
 
 export interface ReadingPart5GapAnswer {
+  gap_filling_id: number
   position: number
   answer: string
 }
