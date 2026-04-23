@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef } from "react"
+import { useRef, memo } from "react"
 import { Plyr } from "plyr-react"
 import "plyr-react/plyr.css"
 import "./listening-part1-audio-player.css"
@@ -9,7 +9,7 @@ interface Props {
   src: string
 }
 
-export function ListeningPart1AudioPlayer({ src }: Props) {
+export const ListeningPart1AudioPlayer = memo(function ListeningPart1AudioPlayer({ src }: Props) {
   const playerRef = useRef<any>(null)
 
   const plyrOptions = {
@@ -39,4 +39,4 @@ export function ListeningPart1AudioPlayer({ src }: Props) {
       />
     </div>
   )
-}
+})

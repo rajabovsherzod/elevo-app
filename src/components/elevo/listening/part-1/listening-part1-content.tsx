@@ -82,25 +82,31 @@ export function ListeningPart1Content() {
     )
   }
 
-  // Result
-  if (phase === "result" && result) {
-    return (
-      <div className="flex flex-col gap-5 pb-6">
-        <PageHeaderWithBack title="Part 1 — Results" />
-        <ListeningPart1Result result={result} questions={questions} audioUrl={audioUrl} />
-      </div>
-    )
-  }
-
-  // Error
-  if (error && questions.length === 0) {
+  // Error - show even if questions loaded partially
+  if (error) {
     return (
       <div className="flex flex-col gap-5 pb-6">
         <PageHeaderWithBack title="Part 1 — Short Conversations" />
         <div className="elevo-card elevo-card-border p-8 text-center">
           <p className="text-error text-sm font-medium">{error}</p>
           <p className="text-on-surface-variant text-xs mt-2">Sahifani yangilab qayta urinib ko'ring</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Sahifani yangilash
+          </button>
         </div>
+      </div>
+    )
+  }
+
+  // Result
+  if (phase === "result" && result) {
+    return (
+      <div className="flex flex-col gap-5 pb-6">
+        <PageHeaderWithBack title="Part 1 — Results" />
+        <ListeningPart1Result result={result} questions={questions} audioUrl={audioUrl} />
       </div>
     )
   }

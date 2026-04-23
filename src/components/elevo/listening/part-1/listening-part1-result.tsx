@@ -1,13 +1,121 @@
 "use client"
 
-import { useRef, useEffect, useState } from "react"
+import { useRef, useEffect, useState, memo } from "react"
 import { CheckCircle2, XCircle, ChevronDown, ChevronUp } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
 import { cx } from "@/utils/cx"
 import type { ListeningPart1EvaluateResponse, ListeningPart1Question } from "@/lib/api/listening"
 import { ListeningPart1AudioPlayer } from "./listening-part1-audio-player"
 
-// ── Props ──────────────────────────────────────────────────────────────────────
+// ── Memoized Answer Review Component ──────────────────────────────────────────
+const AnswerReview = memo(function AnswerReview({ details, questions }: {
+  details: ListeningPart1EvaluateResponse["details"]
+  questions: ListeningPart1Question[]
+}) {
+  return (
+    <div className="elevo-card elevo-card-border overflow-hidden">
+      <div className="px-4 py-3 bg-primary/10">
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary">
+          Answer Review
+        </p>
+      </div>
+      <div className="p-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {details.map((d, i) => {
+            const question  = questions.find(q => q.id === d.question_id)
+            const isCorrect = d.correct
+
+            return (
+              <div
+                key={d.question_id}
+                className="flex flex-col gap-2 p-3 rounded-xl bg-surface-container/50 border border-outline-variant"
+              >
+                {/* Question number + status */}
+                <div className="flex items-center justify-between">
+                  <span className="w-6 h-6 rounded-lg text-[11px] font-black flex items-center justify-center bg-indigo-500 text-white shadow-sm">
+                    {i + 1}
+                  </span>
+                  {isCorrect
+                    ? <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    : <XCircle      className="w-4 h-4 text-error" />
+                  }
+                </div>
+
+                {/* Question text */}
+                {question?.question && (
+                  <p className="text-[11px] text-on-surface-variant leading-relaxed line-clamp-2">
+                    {question.question}
+                  </p>
+                )}
+
+                {/* Answer */}
+                {isCorrect ? (
+                  <span className="text-[11px] font-bold text-green-600 truncate">
+                    {d.user_answer_text ?? "—"}
+                  </span>
+                ) : (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] font-bold text-error line-through opacity-70 truncate">
+                      {d.user_answer_text ?? "—"}
+                    </span>
+                    <span className="text-[11px] font-bold text-green-600 truncate">
+                      {d.correct_answer_text ?? "—"}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+})
+
+// ── Memoized Questions Accordion ──────────────────────────────────────────────
+const QuestionsAccordion = memo(function QuestionsAccordion({ questions }: {
+  questions: ListeningPart1Question[]
+}) {
+  const [questionsOpen, setQuestionsOpen] = useState(false)
+
+  return (
+    <div className="elevo-card elevo-card-border overflow-hidden">
+      <div className="px-4 py-3 bg-primary/10">
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary">
+          Questions ({questions.length})
+        </p>
+      </div>
+      <AccordionRow
+        title="View Questions"
+        open={questionsOpen}
+        onToggle={() => setQuestionsOpen(p => !p)}
+        last
+      >
+        <div className="px-4 pb-4 pt-1 flex flex-col gap-4">
+          {questions.map((q, i) => (
+            <div key={q.id} className="flex flex-col gap-2">
+              <p className="text-sm font-semibold text-on-surface">
+                <span className="text-primary font-black">{i + 1}.</span> {q.question}
+              </p>
+              <div className="pl-6 flex flex-col gap-1.5">
+                {q.answers.map((a, ai) => (
+                  <p key={a.id} className="text-xs text-on-surface-variant">
+                    <span className="font-bold text-on-surface">
+                      {String.fromCharCode(65 + ai)}.
+                    </span>{" "}
+                    {a.answer.length > 2 && a.answer[1] === "." ? a.answer.slice(3) : a.answer}
+                  </p>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </AccordionRow>
+    </div>
+  )
+})
+
+// ── AccordionRow Helper Component ─────────────────────────────────────────────
 function AccordionRow({
   title,
   open,
@@ -64,9 +172,6 @@ export function ListeningPart1Result({ result, questions, audioUrl }: Props) {
   const scorePercent = Math.round(result.score_percent)
   const isGood       = scorePercent >= 70
 
-  const [audioOpen,     setAudioOpen]     = useState(true)
-  const [questionsOpen, setQuestionsOpen] = useState(false)
-
   useEffect(() => {
     const el = barRef.current
     if (!el) return
@@ -110,113 +215,21 @@ export function ListeningPart1Result({ result, questions, audioUrl }: Props) {
         </div>
       </div>
 
-      {/* ── Answer review ── */}
-      <div className="elevo-card elevo-card-border overflow-hidden">
-        <div className="px-4 py-3 bg-primary/10">
-          <p className="text-[10px] font-black uppercase tracking-widest text-primary">
-            Answer Review
-          </p>
-        </div>
-        <div className="p-4">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {result.details.map((d, i) => {
-              const question  = questions.find(q => q.id === d.question_id)
-              const isCorrect = d.correct
+      {/* ── Answer review - memoized to prevent re-renders ── */}
+      <AnswerReview details={result.details} questions={questions} />
 
-              return (
-                <div
-                  key={d.question_id}
-                  className="flex flex-col gap-2 p-3 rounded-xl bg-surface-container/50 border border-outline-variant"
-                >
-                  {/* Question number + status */}
-                  <div className="flex items-center justify-between">
-                    <span className="w-6 h-6 rounded-lg text-[11px] font-black flex items-center justify-center bg-indigo-500 text-white shadow-sm">
-                      {i + 1}
-                    </span>
-                    {isCorrect
-                      ? <CheckCircle2 className="w-4 h-4 text-green-500" />
-                      : <XCircle      className="w-4 h-4 text-error" />
-                    }
-                  </div>
-
-                  {/* Question text */}
-                  {question?.question && (
-                    <p className="text-[11px] text-on-surface-variant leading-relaxed line-clamp-2">
-                      {question.question}
-                    </p>
-                  )}
-
-                  {/* Answer */}
-                  {isCorrect ? (
-                    <span className="text-[11px] font-bold text-green-600 truncate">
-                      {d.user_answer_text ?? "—"}
-                    </span>
-                  ) : (
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[11px] font-bold text-error line-through opacity-70 truncate">
-                        {d.user_answer_text ?? "—"}
-                      </span>
-                      <span className="text-[11px] font-bold text-green-600 truncate">
-                        {d.correct_answer_text ?? "—"}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Audio review accordion ── */}
+      {/* ── Audio player - completely isolated ── */}
       {audioUrl && (
-        <div className="elevo-card overflow-hidden">
-          <div className="px-4 py-3 bg-primary/10">
-            <p className="text-[10px] font-black uppercase tracking-widest text-primary">
-              Audio Review
-            </p>
-          </div>
-
-          <div className="flex flex-col">
-            <AccordionRow
-              title="Listen Again"
-              open={audioOpen}
-              onToggle={() => setAudioOpen(p => !p)}
-            >
-              <div className="px-4 pt-8 pb-4 pt-2">
-                <ListeningPart1AudioPlayer src={audioUrl} />
-              </div>
-            </AccordionRow>
-
-            <AccordionRow
-              title={`Questions (${questions.length})`}
-              open={questionsOpen}
-              onToggle={() => setQuestionsOpen(p => !p)}
-              last
-            >
-              <div className="px-4 pb-4 pt-1 flex flex-col gap-4">
-                {questions.map((q, i) => (
-                  <div key={q.id} className="flex flex-col gap-2">
-                    <p className="text-sm font-semibold text-on-surface">
-                      <span className="text-primary font-black">{i + 1}.</span> {q.question}
-                    </p>
-                    <div className="pl-6 flex flex-col gap-1.5">
-                      {q.answers.map((a, ai) => (
-                        <p key={a.id} className="text-xs text-on-surface-variant">
-                          <span className="font-bold text-on-surface">
-                            {String.fromCharCode(65 + ai)}.
-                          </span>{" "}
-                          {a.answer.length > 2 && a.answer[1] === "." ? a.answer.slice(3) : a.answer}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </AccordionRow>
-          </div>
+        <div className="elevo-card elevo-card-border p-4" style={{ contain: 'layout style paint' }}>
+          <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-3">
+            Exam Audio
+          </p>
+          <ListeningPart1AudioPlayer src={audioUrl} />
         </div>
       )}
+
+      {/* ── Questions accordion - memoized to prevent audio re-render ── */}
+      <QuestionsAccordion questions={questions} />
     </div>
   )
 }

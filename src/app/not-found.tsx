@@ -5,11 +5,19 @@
    Full width centered layout
    ═══════════════════════════════════════ */
 
+import { useLayoutEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Home, SearchX } from "lucide-react"
 
 export default function NotFound() {
   const router = useRouter()
+
+  // Signals SplashProvider (ancestor) to skip splash — runs before browser paint
+  // useLayoutEffect order is bottom-up, so this flag is set before SplashProvider reads it
+  useLayoutEffect(() => {
+    ;(window as any).__ELEVO_NOT_FOUND__ = true
+    return () => { delete (window as any).__ELEVO_NOT_FOUND__ }
+  }, [])
 
   return (
     <div className="w-full min-h-[calc(100vh-200px)] flex flex-col items-center justify-center gap-6">

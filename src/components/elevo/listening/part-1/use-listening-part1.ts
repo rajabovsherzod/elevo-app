@@ -56,7 +56,10 @@ export function useListeningPart1() {
 
     audio.addEventListener("ended", finish)
     audio.addEventListener("error", finish)
-    audio.play().catch(finish)
+    audio.play().catch((e) => {
+      console.warn('Audio play failed:', e)
+      finish()
+    })
   }, [stopAudio])
 
   // Fetch fresh data on every mount
@@ -82,9 +85,10 @@ export function useListeningPart1() {
         if (audioUrl) {
           try {
             const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "")
-            const path = new URL(audioUrl).pathname
-            audioUrl = apiBase + path
-          } catch {
+            const parsed = new URL(audioUrl)
+            audioUrl = apiBase + parsed.pathname
+          } catch (e) {
+            console.warn('Audio URL parse error:', e)
             // URL parse xatosi bo'lsa asl URL ni ishlatamiz
           }
         }
@@ -129,8 +133,10 @@ export function useListeningPart1() {
         })
       } catch (err: any) {
         if (!cancelled) {
-          setError("Savollarni yuklashda xatolik: " + (err?.message ?? "Unknown error"))
-          setPhase("exam")
+          const errorMsg = "Savollarni yuklashda xatolik: " + (err?.message ?? "Unknown error")
+          console.error('Listening Part 1 fetch error:', err)
+          setError(errorMsg)
+          setPhase("exam") // Fallback to exam phase so error UI shows
         }
       }
     })()
@@ -161,7 +167,9 @@ export function useListeningPart1() {
       })
       setResult(res)
       setPhase("result")
-    } catch {
+    } catch (err: any) {
+      console.error('Submit error:', err)
+      setError("Natijani yuborishda xatolik: " + (err?.message ?? "Unknown error"))
       setPhase("exam")
     }
   }, [answers, stopAudio])
