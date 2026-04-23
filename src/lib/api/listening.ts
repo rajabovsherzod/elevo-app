@@ -190,3 +190,78 @@ export async function evaluateListeningPart2(
     details,
   }
 }
+
+// ── Part 3 Types ──────────────────────────────────────────────────────────────
+
+export interface ListeningPart3QuestionItem {
+  id: number
+  text: string
+}
+
+export interface ListeningPart3AnswerOption {
+  id: number
+  text: string
+}
+
+export interface ListeningPart3Set {
+  title: string | null
+  instruction: string | null
+  audio_url: string | null
+  questions: ListeningPart3QuestionItem[]  // includes "Main" + Speaker 1-5
+  answers: ListeningPart3AnswerOption[]    // A-F options
+}
+
+export interface ListeningPart3QuestionsResponse {
+  exam_id: number
+  part: number
+  set: ListeningPart3Set
+}
+
+export interface ListeningPart3SubmitMatch {
+  question_id: number
+  answer_question_id: number
+}
+
+export interface ListeningPart3EvaluateRequest {
+  exam_id: number
+  matches: ListeningPart3SubmitMatch[]
+}
+
+export interface ListeningPart3AnswerDetail {
+  question_id: number
+  answer_question_id: number
+  correct: boolean
+  correct_answer_id: number | null
+}
+
+export interface ListeningPart3EvaluateResponse {
+  correct_count: number
+  total_questions: number
+  score_percent: number
+  details: ListeningPart3AnswerDetail[]
+}
+
+// ── Part 3 API Functions ──────────────────────────────────────────────────────
+
+export async function getListeningPart3Questions(
+  examId?: number
+): Promise<ListeningPart3QuestionsResponse> {
+  const params: Record<string, unknown> = examId ? { exam_id: examId } : {}
+  params._t = Date.now()
+
+  const { data } = await apiClient.get<ListeningPart3QuestionsResponse>(
+    ENDPOINTS.listening.part(3).question,
+    { params }
+  )
+  return data
+}
+
+export async function evaluateListeningPart3(
+  payload: ListeningPart3EvaluateRequest
+): Promise<ListeningPart3EvaluateResponse> {
+  const { data } = await apiClient.post<ListeningPart3EvaluateResponse>(
+    ENDPOINTS.listening.part(3).evaluate,
+    payload
+  )
+  return data
+}
