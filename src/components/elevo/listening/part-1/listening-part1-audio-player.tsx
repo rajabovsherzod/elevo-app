@@ -28,7 +28,7 @@ export function ListeningPart1AudioPlayer({ src }: Props) {
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full" key="audio-player-stable">
       <Plyr
         source={{
           type: 'audio',
