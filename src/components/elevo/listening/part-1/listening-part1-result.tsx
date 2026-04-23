@@ -5,7 +5,7 @@ import { CheckCircle2, XCircle, ChevronDown, ChevronUp } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
 import { cx } from "@/utils/cx"
 import type { ListeningPart1EvaluateResponse, ListeningPart1Question } from "@/lib/api/listening"
-import { ListeningPart1AudioPlayer } from "./listening-part1-audio-player"
+import { ListeningAudioPlayer } from "@/components/elevo/listening/shared"
 
 // ── Memoized Answer Review Component ──────────────────────────────────────────
 const AnswerReview = memo(function AnswerReview({ details, questions }: {
@@ -223,7 +223,7 @@ export function ListeningPart1Result({ result, questions, audioUrl }: Props) {
           <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-3">
             Exam Audio
           </p>
-          <ListeningPart1AudioPlayer src={audioUrl} />
+          <ListeningAudioPlayer src={audioUrl} />
         </div>
       )}
 
