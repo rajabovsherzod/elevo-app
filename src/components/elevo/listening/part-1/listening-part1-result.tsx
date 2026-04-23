@@ -34,7 +34,7 @@ function AccordionRow({
           : <ChevronDown className="w-4 h-4 text-on-surface-variant" />
         }
       </button>
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {open && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
