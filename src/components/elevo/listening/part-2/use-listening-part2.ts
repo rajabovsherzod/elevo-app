@@ -18,8 +18,28 @@ export type ListeningPart2Phase =
   | "error"
 
 const LOAD_TIMEOUT_MS = 30_000
+const MAX_RETRIES = 3
+const RETRY_DELAY_MS = 1_500
+
 const API_BASE = () =>
   (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "")
+
+function sleep(ms: number) {
+  return new Promise<void>(resolve => setTimeout(resolve, ms))
+}
+
+async function fetchPart2WithRetry() {
+  let lastErr: unknown
+  for (let i = 0; i < MAX_RETRIES; i++) {
+    try {
+      return await getListeningPart2Questions()
+    } catch (err) {
+      lastErr = err
+      if (i < MAX_RETRIES - 1) await sleep(RETRY_DELAY_MS)
+    }
+  }
+  throw lastErr
+}
 
 function fixAudioUrl(raw: string | null): string {
   if (!raw) return ""
@@ -31,59 +51,46 @@ function fixAudioUrl(raw: string | null): string {
 }
 
 export function useListeningPart2() {
-  const [phase, setPhase]         = useState<ListeningPart2Phase>("loading")
-  const [question, setQuestion]   = useState<ListeningPart2Question | null>(null)
-  const [audioUrl, setAudioUrl]   = useState<string | null>(null)
-  const [answers, setAnswers]     = useState<Record<number, string>>({})
-  const [result, setResult]       = useState<ListeningPart2EvaluateResponse | null>(null)
+  const [phase, setPhase]           = useState<ListeningPart2Phase>("loading")
+  const [question, setQuestion]     = useState<ListeningPart2Question | null>(null)
+  const [audioUrl, setAudioUrl]     = useState<string | null>(null)
+  const [answers, setAnswers]       = useState<Record<number, string>>({})
+  const [result, setResult]         = useState<ListeningPart2EvaluateResponse | null>(null)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
-  const [errorMsg, setErrorMsg]   = useState<string | null>(null)
-  const [retryKey, setRetryKey]   = useState(0)
+  const [errorMsg, setErrorMsg]     = useState<string | null>(null)
+  const [retryKey, setRetryKey]     = useState(0)
 
   const audioRef  = useRef<HTMLAudioElement | null>(null)
   const examIdRef = useRef<number | null>(null)
 
-  // ── Audio helpers ────────────────────────────────────────────────────────────
-
+  // useCallback([]) — faqat ref va stable setter → hech qachon o'zgarmaydi
   const stopAudio = useCallback(() => {
-    const audio = audioRef.current
-    if (audio) {
-      audio.pause()
-      audio.src = ""
-      audioRef.current = null
-    }
+    const a = audioRef.current
+    if (a) { a.pause(); a.src = ""; audioRef.current = null }
     setIsAudioPlaying(false)
   }, [])
 
-  const playAudio = useCallback(
-    (src: string, onEnd?: () => void) => {
-      stopAudio()
-      const audio = new Audio(src)
-      audioRef.current = audio
-      setIsAudioPlaying(true)
+  // useCallback([stopAudio]) — stopAudio [] deps → playAudio ham stable
+  const playAudio = useCallback((src: string, onEnd?: () => void) => {
+    stopAudio()
+    const audio = new Audio(src)
+    audioRef.current = audio
+    setIsAudioPlaying(true)
+    let done = false
+    const finish = () => {
+      if (done) return
+      done = true
+      audio.removeEventListener("ended", finish)
+      audio.removeEventListener("error", finish)
+      setIsAudioPlaying(false)
+      onEnd?.()
+    }
+    audio.addEventListener("ended", finish)
+    audio.addEventListener("error", finish)
+    audio.play().catch(() => finish())
+  }, [stopAudio])
 
-      let done = false
-      const finish = () => {
-        if (done) return
-        done = true
-        audio.removeEventListener("ended", finish)
-        audio.removeEventListener("error", finish)
-        setIsAudioPlaying(false)
-        onEnd?.()
-      }
-
-      audio.addEventListener("ended", finish)
-      audio.addEventListener("error", finish)
-      audio.play().catch(e => {
-        console.warn("Audio play failed:", e)
-        finish()
-      })
-    },
-    [stopAudio]
-  )
-
-  // ── Main fetch ───────────────────────────────────────────────────────────────
-
+  // stopAudio + playAudio deps da — ular stable, hech qachon re-run bermaydi
   useEffect(() => {
     setPhase("loading")
     setQuestion(null)
@@ -106,39 +113,36 @@ export function useListeningPart2() {
 
     ;(async () => {
       try {
-        const data = await getListeningPart2Questions()
+        const data = await fetchPart2WithRetry()
         if (cancelled) return
+
+        clearTimeout(timeout)
 
         const url = fixAudioUrl(data.question.audio_url)
         examIdRef.current = data.exam_id
         setQuestion(data.question)
         setAudioUrl(url || null)
 
-        // Init blank answers for each position
         const blank: Record<number, string> = {}
         ;(data.question.positions ?? []).forEach(p => { blank[p] = "" })
         setAnswers(blank)
 
         setPhase("instruction")
 
-        // Audio chain: instruction jingle → question audio → exam
         playAudio("/sounds/listening-part2.mp3", () => {
           if (cancelled) return
           if (url) {
             setPhase("question-audio")
-            playAudio(url, () => {
-              if (!cancelled) setPhase("exam")
-            })
+            playAudio(url, () => { if (!cancelled) setPhase("exam") })
           } else {
             setPhase("exam")
           }
         })
       } catch (err: any) {
-        if (cancelled) return
-        setErrorMsg(err?.message ?? "Noma'lum xatolik")
-        setPhase("error")
-      } finally {
         clearTimeout(timeout)
+        if (cancelled) return
+        setErrorMsg(err?.response?.data?.detail ?? err?.message ?? "Noma'lum xatolik")
+        setPhase("error")
       }
     })()
 
@@ -148,8 +152,6 @@ export function useListeningPart2() {
       stopAudio()
     }
   }, [retryKey, stopAudio, playAudio])
-
-  // ── Actions ──────────────────────────────────────────────────────────────────
 
   const retry = useCallback(() => setRetryKey(k => k + 1), [])
 
@@ -174,7 +176,7 @@ export function useListeningPart2() {
       setResult(res)
       setPhase("result")
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Noma'lum xatolik")
+      setErrorMsg(err?.response?.data?.detail ?? err?.message ?? "Noma'lum xatolik")
       setPhase("error")
     }
   }, [answers, question, stopAudio])

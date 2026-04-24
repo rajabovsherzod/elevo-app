@@ -1,10 +1,7 @@
-import { Suspense } from "react"
+"use client"
+
 import { ListeningPart1Content } from "@/components/elevo/listening/part-1/listening-part1-content"
 
 export default function ListeningPart1Page() {
-  return (
-    <Suspense>
-      <ListeningPart1Content />
-    </Suspense>
-  )
+  return <ListeningPart1Content />
 }

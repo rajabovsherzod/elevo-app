@@ -18,8 +18,28 @@ export type ListeningPart3Phase =
   | "error"
 
 const LOAD_TIMEOUT_MS = 30_000
+const MAX_RETRIES = 3
+const RETRY_DELAY_MS = 1_500
+
 const API_BASE = () =>
   (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "")
+
+function sleep(ms: number) {
+  return new Promise<void>(resolve => setTimeout(resolve, ms))
+}
+
+async function fetchPart3WithRetry() {
+  let lastErr: unknown
+  for (let i = 0; i < MAX_RETRIES; i++) {
+    try {
+      return await getListeningPart3Questions()
+    } catch (err) {
+      lastErr = err
+      if (i < MAX_RETRIES - 1) await sleep(RETRY_DELAY_MS)
+    }
+  }
+  throw lastErr
+}
 
 function fixAudioUrl(raw: string | null): string {
   if (!raw) return ""
@@ -31,25 +51,26 @@ function fixAudioUrl(raw: string | null): string {
 }
 
 export function useListeningPart3() {
-  const [phase, setPhase]     = useState<ListeningPart3Phase>("loading")
-  const [set, setSet]         = useState<ListeningPart3Set | null>(null)
-  const [audioUrl, setAudioUrl] = useState<string | null>(null)
-  // matches: { speakerId → selectedAnswerId }
-  const [matches, setMatches] = useState<Record<number, number>>({})
-  const [result, setResult]   = useState<ListeningPart3EvaluateResponse | null>(null)
+  const [phase, setPhase]           = useState<ListeningPart3Phase>("loading")
+  const [set, setSet]               = useState<ListeningPart3Set | null>(null)
+  const [audioUrl, setAudioUrl]     = useState<string | null>(null)
+  const [matches, setMatches]       = useState<Record<number, number>>({})
+  const [result, setResult]         = useState<ListeningPart3EvaluateResponse | null>(null)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const [retryKey, setRetryKey] = useState(0)
+  const [errorMsg, setErrorMsg]     = useState<string | null>(null)
+  const [retryKey, setRetryKey]     = useState(0)
 
   const audioRef  = useRef<HTMLAudioElement | null>(null)
   const examIdRef = useRef<number | null>(null)
 
+  // useCallback([]) — faqat ref va stable setter → hech qachon o'zgarmaydi
   const stopAudio = useCallback(() => {
-    const audio = audioRef.current
-    if (audio) { audio.pause(); audio.src = ""; audioRef.current = null }
+    const a = audioRef.current
+    if (a) { a.pause(); a.src = ""; audioRef.current = null }
     setIsAudioPlaying(false)
   }, [])
 
+  // useCallback([stopAudio]) — stopAudio [] deps → playAudio ham stable
   const playAudio = useCallback((src: string, onEnd?: () => void) => {
     stopAudio()
     const audio = new Audio(src)
@@ -66,9 +87,10 @@ export function useListeningPart3() {
     }
     audio.addEventListener("ended", finish)
     audio.addEventListener("error", finish)
-    audio.play().catch(e => { console.warn("Audio play failed:", e); finish() })
+    audio.play().catch(() => finish())
   }, [stopAudio])
 
+  // stopAudio + playAudio deps da — ular stable, hech qachon re-run bermaydi
   useEffect(() => {
     setPhase("loading")
     setSet(null)
@@ -79,6 +101,7 @@ export function useListeningPart3() {
     examIdRef.current = null
 
     let cancelled = false
+
     const timeout = setTimeout(() => {
       if (!cancelled) {
         cancelled = true
@@ -90,8 +113,10 @@ export function useListeningPart3() {
 
     ;(async () => {
       try {
-        const data = await getListeningPart3Questions()
+        const data = await fetchPart3WithRetry()
         if (cancelled) return
+
+        clearTimeout(timeout)
 
         const url = fixAudioUrl(data.set.audio_url)
         examIdRef.current = data.exam_id
@@ -109,15 +134,18 @@ export function useListeningPart3() {
           }
         })
       } catch (err: any) {
-        if (cancelled) return
-        setErrorMsg(err?.message ?? "Noma'lum xatolik")
-        setPhase("error")
-      } finally {
         clearTimeout(timeout)
+        if (cancelled) return
+        setErrorMsg(err?.response?.data?.detail ?? err?.message ?? "Noma'lum xatolik")
+        setPhase("error")
       }
     })()
 
-    return () => { cancelled = true; clearTimeout(timeout); stopAudio() }
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+      stopAudio()
+    }
   }, [retryKey, stopAudio, playAudio])
 
   const retry = useCallback(() => setRetryKey(k => k + 1), [])
@@ -132,7 +160,6 @@ export function useListeningPart3() {
     stopAudio()
     setPhase("submitting")
     try {
-      // Only submit for speaker questions (skip "Main")
       const speakers = set.questions.filter(q => q.text !== "Main")
       const res = await evaluateListeningPart3({
         exam_id: eid,
@@ -143,7 +170,7 @@ export function useListeningPart3() {
       setResult(res)
       setPhase("result")
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Noma'lum xatolik")
+      setErrorMsg(err?.response?.data?.detail ?? err?.message ?? "Noma'lum xatolik")
       setPhase("error")
     }
   }, [set, matches, stopAudio])

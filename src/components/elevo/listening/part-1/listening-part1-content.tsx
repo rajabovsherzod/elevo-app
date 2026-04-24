@@ -12,7 +12,7 @@ import { useListeningPart1 }    from "./use-listening-part1"
 // ── Loading block ──────────────────────────────────────────────────────────────
 function LoadingBlock() {
   return (
-    <div className="flex flex-col gap-5 pb-6">
+    <div className="flex flex-col pb-6">
       <PageHeaderWithBack title="Part 1 — Short Conversations" />
       <div className="flex items-center justify-center min-h-[60vh]">
         <ExamLoading />
@@ -93,9 +93,9 @@ export function ListeningPart1Content() {
     )
   }
 
-  // ── Phases: instruction / question-audio / exam / submitting ─────────────────
+  // ── Phases: instruction / question-audio / exam ──────────────────────────────
   const instructionOnly = phase === "instruction"
-  const canAnswer       = phase === "question-audio" || phase === "exam" || phase === "submitting"
+  const canAnswer       = phase === "question-audio" || phase === "exam"
   const canSubmit       = phase === "exam"
 
   return (
@@ -152,13 +152,12 @@ export function ListeningPart1Content() {
       )}
 
       {/* Submit button */}
-      {(canSubmit || phase === "submitting") && questions.length > 0 && (
+      {canSubmit && questions.length > 0 && (
         <div className="flex justify-end pt-2">
           <Button
             size="md"
             color="primary"
-            isLoading={phase === "submitting"}
-            isDisabled={phase === "submitting" || totalAnswered < questions.length}
+            isDisabled={totalAnswered < questions.length}
             onClick={submit}
           >
             Submit

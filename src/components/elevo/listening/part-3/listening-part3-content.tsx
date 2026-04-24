@@ -12,7 +12,7 @@ import { useListeningPart3 }         from "./use-listening-part3"
 // ── Loading ───────────────────────────────────────────────────────────────────
 function LoadingBlock() {
   return (
-    <div className="flex flex-col gap-5 pb-6">
+    <div className="flex flex-col pb-6">
       <PageHeaderWithBack title="Part 3 — Speaker Matching" />
       <div className="flex items-center justify-center min-h-[60vh]">
         <ExamLoading />
@@ -174,13 +174,12 @@ export function ListeningPart3Content() {
       )}
 
       {/* Submit */}
-      {(canSubmit || phase === "submitting") && speakers.length > 0 && (
+      {canSubmit && speakers.length > 0 && (
         <div className="flex justify-end pt-2">
           <Button
             size="md"
             color="primary"
-            isLoading={phase === "submitting"}
-            isDisabled={phase === "submitting" || !allMatched}
+            isDisabled={!allMatched}
             onClick={submit}
           >
             Submit

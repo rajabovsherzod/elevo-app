@@ -18,8 +18,28 @@ export type ListeningPhase =
   | "error"
 
 const LOAD_TIMEOUT_MS = 30_000
+const MAX_RETRIES = 3
+const RETRY_DELAY_MS = 1_500
+
 const API_BASE = () =>
   (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "")
+
+function sleep(ms: number) {
+  return new Promise<void>(resolve => setTimeout(resolve, ms))
+}
+
+async function fetchPart1WithRetry() {
+  let lastErr: unknown
+  for (let i = 0; i < MAX_RETRIES; i++) {
+    try {
+      return await getListeningPart1Questions()
+    } catch (err) {
+      lastErr = err
+      if (i < MAX_RETRIES - 1) await sleep(RETRY_DELAY_MS)
+    }
+  }
+  throw lastErr
+}
 
 function fixAudioUrl(raw: string | null): string {
   if (!raw) return ""
@@ -35,13 +55,11 @@ function groupQuestions(
   audioUrl: string
 ): ListeningPart1Question[] {
   if (raw.answers.length <= 3) return [{ ...raw, audio_url: audioUrl }]
-
   const map = new Map<number, typeof raw.answers>()
   raw.answers.forEach(a => {
     if (!map.has(a.position)) map.set(a.position, [])
     map.get(a.position)!.push(a)
   })
-
   return Array.from(map.entries())
     .sort(([a], [b]) => a - b)
     .map(([position, posAnswers]) => ({
@@ -55,58 +73,46 @@ function groupQuestions(
 }
 
 export function useListeningPart1() {
-  const [phase, setPhase]       = useState<ListeningPhase>("loading")
-  const [questions, setQuestions] = useState<ListeningPart1Question[]>([])
-  const [errorMsg, setErrorMsg]   = useState<string | null>(null)
-  const [answers, setAnswers]     = useState<Record<number, number>>({})
-  const [result, setResult]       = useState<ListeningPart1EvaluateResponse | null>(null)
+  const [phase, setPhase]           = useState<ListeningPhase>("loading")
+  const [questions, setQuestions]   = useState<ListeningPart1Question[]>([])
+  const [errorMsg, setErrorMsg]     = useState<string | null>(null)
+  const [answers, setAnswers]       = useState<Record<number, number>>({})
+  const [result, setResult]         = useState<ListeningPart1EvaluateResponse | null>(null)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
-  const [retryKey, setRetryKey]   = useState(0)
+  const [retryKey, setRetryKey]     = useState(0)
 
-  const audioRef   = useRef<HTMLAudioElement | null>(null)
-  const examIdRef  = useRef<number | null>(null)
+  const audioRef  = useRef<HTMLAudioElement | null>(null)
+  const examIdRef = useRef<number | null>(null)
 
-  // ── Audio helpers ────────────────────────────────────────────────────────────
-
+  // useCallback([]) — faqat ref va stable setter → mount da bir marta yaratiladi, hech qachon o'zgarmaydi
   const stopAudio = useCallback(() => {
-    const audio = audioRef.current
-    if (audio) {
-      audio.pause()
-      audio.src = ""
-      audioRef.current = null
-    }
+    const a = audioRef.current
+    if (a) { a.pause(); a.src = ""; audioRef.current = null }
     setIsAudioPlaying(false)
   }, [])
 
-  const playAudio = useCallback(
-    (src: string, onEnd?: () => void) => {
-      stopAudio()
-      const audio = new Audio(src)
-      audioRef.current = audio
-      setIsAudioPlaying(true)
+  // useCallback([stopAudio]) — stopAudio [] deps → playAudio ham hech qachon o'zgarmaydi
+  const playAudio = useCallback((src: string, onEnd?: () => void) => {
+    stopAudio()
+    const audio = new Audio(src)
+    audioRef.current = audio
+    setIsAudioPlaying(true)
+    let done = false
+    const finish = () => {
+      if (done) return
+      done = true
+      audio.removeEventListener("ended", finish)
+      audio.removeEventListener("error", finish)
+      setIsAudioPlaying(false)
+      onEnd?.()
+    }
+    audio.addEventListener("ended", finish)
+    audio.addEventListener("error", finish)
+    audio.play().catch(() => finish())
+  }, [stopAudio])
 
-      let done = false
-      const finish = () => {
-        if (done) return
-        done = true
-        audio.removeEventListener("ended", finish)
-        audio.removeEventListener("error", finish)
-        setIsAudioPlaying(false)
-        onEnd?.()
-      }
-
-      audio.addEventListener("ended", finish)
-      audio.addEventListener("error", finish)
-      audio.play().catch(e => {
-        console.warn("Audio play failed:", e)
-        finish()
-      })
-    },
-    [stopAudio]
-  )
-
-  // ── Main fetch — reruns on retry ─────────────────────────────────────────────
-
+  // stopAudio + playAudio deps da — ular [] va [stable] bilan memoized, hech qachon re-run bo'lmaydi
+  // Bu React hooks qoidasiga to'liq mos, eslint-disable kerak emas
   useEffect(() => {
     setPhase("loading")
     setQuestions([])
@@ -117,7 +123,6 @@ export function useListeningPart1() {
 
     let cancelled = false
 
-    // Timeout guard — prevents infinite loading if API hangs
     const timeout = setTimeout(() => {
       if (!cancelled) {
         cancelled = true
@@ -129,38 +134,33 @@ export function useListeningPart1() {
 
     ;(async () => {
       try {
-        const data = await getListeningPart1Questions()
+        const data = await fetchPart1WithRetry()
         if (cancelled) return
 
-        // Handle both single question and array of questions
-        const questions = Array.isArray(data.question) ? data.question : [data.question]
-        const audioUrl = fixAudioUrl(questions[0]?.audio_url ?? null)
-        
-        // Transform each question
-        const transformed = questions.flatMap(q => groupQuestions(q, audioUrl))
+        clearTimeout(timeout)
+
+        const qs = Array.isArray(data.question) ? data.question : [data.question]
+        const audioUrl = fixAudioUrl(qs[0]?.audio_url ?? null)
+        const transformed = qs.flatMap(q => groupQuestions(q, audioUrl))
 
         examIdRef.current = data.exam_id
         setQuestions(transformed)
         setPhase("instruction")
 
-        // Audio chain: instruction jingle → question audio → exam
         playAudio("/sounds/listening-part1.mp3", () => {
           if (cancelled) return
           if (audioUrl) {
             setPhase("question-audio")
-            playAudio(audioUrl, () => {
-              if (!cancelled) setPhase("exam")
-            })
+            playAudio(audioUrl, () => { if (!cancelled) setPhase("exam") })
           } else {
             setPhase("exam")
           }
         })
       } catch (err: any) {
-        if (cancelled) return
-        setErrorMsg(err?.message ?? "Noma'lum xatolik")
-        setPhase("error")
-      } finally {
         clearTimeout(timeout)
+        if (cancelled) return
+        setErrorMsg(err?.response?.data?.detail ?? err?.message ?? "Noma'lum xatolik")
+        setPhase("error")
       }
     })()
 
@@ -170,8 +170,6 @@ export function useListeningPart1() {
       stopAudio()
     }
   }, [retryKey, stopAudio, playAudio])
-
-  // ── Actions ──────────────────────────────────────────────────────────────────
 
   const retry = useCallback(() => setRetryKey(k => k + 1), [])
 
@@ -189,13 +187,13 @@ export function useListeningPart1() {
         exam_id: eid,
         answers: Object.entries(answers).map(([qid, aid]) => ({
           question_id: Number(qid),
-          answer_id: Number(aid),
+          answer_id:   Number(aid),
         })),
       })
       setResult(res)
       setPhase("result")
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Noma'lum xatolik")
+      setErrorMsg(err?.response?.data?.detail ?? err?.message ?? "Noma'lum xatolik")
       setPhase("error")
     }
   }, [answers, stopAudio])

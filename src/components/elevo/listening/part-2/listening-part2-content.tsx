@@ -12,7 +12,7 @@ import { useListeningPart2 }      from "./use-listening-part2"
 // ── Loading ───────────────────────────────────────────────────────────────────
 function LoadingBlock() {
   return (
-    <div className="flex flex-col gap-5 pb-6">
+    <div className="flex flex-col pb-6">
       <PageHeaderWithBack title="Part 2 — Gap Filling" />
       <div className="flex items-center justify-center min-h-[60vh]">
         <ExamLoading />
@@ -159,13 +159,12 @@ export function ListeningPart2Content() {
       )}
 
       {/* Submit */}
-      {(canSubmit || phase === "submitting") && question && (
+      {canSubmit && question && (
         <div className="flex justify-end pt-2">
           <Button
             size="md"
             color="primary"
-            isLoading={phase === "submitting"}
-            isDisabled={phase === "submitting" || !allFilled}
+            isDisabled={!allFilled}
             onClick={submit}
           >
             Submit

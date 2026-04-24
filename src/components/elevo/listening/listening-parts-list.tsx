@@ -42,6 +42,7 @@ const PARTS: ListeningPart[] = [
     levelColor: "#10b981",
     icon: Layers,
     href: "/listening/part-5",
+    comingSoon: true,
   },
   {
     id: "6",
@@ -50,6 +51,7 @@ const PARTS: ListeningPart[] = [
     levelColor: "#ef4444",
     icon: FileText,
     href: "/listening/part-6",
+    comingSoon: true,
   },
 ]
 

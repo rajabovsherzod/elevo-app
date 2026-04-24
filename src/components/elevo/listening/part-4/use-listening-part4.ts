@@ -17,35 +17,38 @@ export type ListeningPart4Phase =
   | "result"
   | "error"
 
-const API_TIMEOUT_MS = 20_000   // API call max wait
-const IMAGE_TIMEOUT_MS = 10_000 // Image preload max wait
-const MAX_RETRIES = 3           // API retry attempts
+const LOAD_TIMEOUT_MS = 20_000
+const IMAGE_TIMEOUT_MS = 10_000
+const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 1_500
 
 const API_BASE = () =>
   (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "")
 
-function fixUrl(raw: string | null): string {
-  if (!raw) return ""
-  try { return API_BASE() + new URL(raw).pathname }
-  catch { return raw }
-}
-
 function sleep(ms: number) {
   return new Promise<void>(resolve => setTimeout(resolve, ms))
 }
 
-async function fetchWithRetry(retries: number): Promise<Awaited<ReturnType<typeof getListeningPart4Questions>>> {
+async function fetchPart4WithRetry() {
   let lastErr: unknown
-  for (let attempt = 0; attempt < retries; attempt++) {
+  for (let i = 0; i < MAX_RETRIES; i++) {
     try {
       return await getListeningPart4Questions()
     } catch (err) {
       lastErr = err
-      if (attempt < retries - 1) await sleep(RETRY_DELAY_MS)
+      if (i < MAX_RETRIES - 1) await sleep(RETRY_DELAY_MS)
     }
   }
   throw lastErr
+}
+
+function fixUrl(raw: string | null): string {
+  if (!raw) return ""
+  try {
+    return API_BASE() + new URL(raw).pathname
+  } catch {
+    return raw
+  }
 }
 
 function preloadImage(src: string): Promise<void> {
@@ -53,31 +56,33 @@ function preloadImage(src: string): Promise<void> {
     const img = new window.Image()
     const timer = setTimeout(resolve, IMAGE_TIMEOUT_MS)
     img.onload  = () => { clearTimeout(timer); resolve() }
-    img.onerror = () => { clearTimeout(timer); resolve() } // never block on image failure
+    img.onerror = () => { clearTimeout(timer); resolve() }
     img.src = src
   })
 }
 
 export function useListeningPart4() {
-  const [phase, setPhase]             = useState<ListeningPart4Phase>("loading")
-  const [set, setSet]                 = useState<ListeningPart4Set | null>(null)
-  const [audioUrl, setAudioUrl]       = useState<string | null>(null)
-  const [imageUrl, setImageUrl]       = useState<string | null>(null)
-  const [userLetters, setUserLetters] = useState<Record<number, string>>({})
-  const [result, setResult]           = useState<ListeningPart4EvaluateResponse | null>(null)
+  const [phase, setPhase]               = useState<ListeningPart4Phase>("loading")
+  const [set, setSet]                   = useState<ListeningPart4Set | null>(null)
+  const [audioUrl, setAudioUrl]         = useState<string | null>(null)
+  const [imageUrl, setImageUrl]         = useState<string | null>(null)
+  const [userLetters, setUserLetters]   = useState<Record<number, string>>({})
+  const [result, setResult]             = useState<ListeningPart4EvaluateResponse | null>(null)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
-  const [errorMsg, setErrorMsg]       = useState<string | null>(null)
-  const [retryKey, setRetryKey]       = useState(0)
+  const [errorMsg, setErrorMsg]         = useState<string | null>(null)
+  const [retryKey, setRetryKey]         = useState(0)
 
   const audioRef  = useRef<HTMLAudioElement | null>(null)
   const examIdRef = useRef<number | null>(null)
 
+  // useCallback([]) — faqat ref va stable setter → hech qachon o'zgarmaydi
   const stopAudio = useCallback(() => {
     const a = audioRef.current
     if (a) { a.pause(); a.src = ""; audioRef.current = null }
     setIsAudioPlaying(false)
   }, [])
 
+  // useCallback([stopAudio]) — stopAudio [] deps → playAudio ham stable
   const playAudio = useCallback((src: string, onEnd?: () => void) => {
     stopAudio()
     const audio = new Audio(src)
@@ -94,9 +99,10 @@ export function useListeningPart4() {
     }
     audio.addEventListener("ended", finish)
     audio.addEventListener("error", finish)
-    audio.play().catch(e => { console.warn("Audio play failed:", e); finish() })
+    audio.play().catch(() => finish())
   }, [stopAudio])
 
+  // stopAudio + playAudio deps da — ular stable, hech qachon re-run bermaydi
   useEffect(() => {
     setPhase("loading")
     setSet(null)
@@ -109,34 +115,29 @@ export function useListeningPart4() {
 
     let cancelled = false
 
-    // API-only timeout — cleared as soon as data arrives
-    const apiTimeout = setTimeout(() => {
+    const timeout = setTimeout(() => {
       if (!cancelled) {
         cancelled = true
         stopAudio()
         setErrorMsg("Server javob bermadi. Internet aloqasini tekshiring va qayta urining.")
         setPhase("error")
       }
-    }, API_TIMEOUT_MS)
+    }, LOAD_TIMEOUT_MS)
 
     ;(async () => {
       try {
-        // 1. Fetch with automatic retry
-        const data = await fetchWithRetry(MAX_RETRIES)
+        const data = await fetchPart4WithRetry()
         if (cancelled) return
 
-        // API succeeded — clear the timeout immediately
-        clearTimeout(apiTimeout)
+        clearTimeout(timeout)
 
         const aUrl = fixUrl(data.set.audio_url)
         const iUrl = fixUrl(data.set.image_url)
         examIdRef.current = data.exam_id
 
-        // 2. Preload image in parallel with nothing blocking — stays on loading screen
         if (iUrl) await preloadImage(iUrl)
         if (cancelled) return
 
-        // 3. Everything ready — commit state and start
         setSet(data.set)
         setAudioUrl(aUrl || null)
         setImageUrl(iUrl || null)
@@ -152,15 +153,18 @@ export function useListeningPart4() {
           }
         })
       } catch (err: any) {
-        clearTimeout(apiTimeout)
+        clearTimeout(timeout)
         if (cancelled) return
-        const msg = err?.response?.data?.detail ?? err?.message ?? "Noma'lum xatolik"
-        setErrorMsg(`Yuklashda xatolik: ${msg}. Qayta urining.`)
+        setErrorMsg(err?.response?.data?.detail ?? err?.message ?? "Noma'lum xatolik")
         setPhase("error")
       }
     })()
 
-    return () => { cancelled = true; clearTimeout(apiTimeout); stopAudio() }
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+      stopAudio()
+    }
   }, [retryKey, stopAudio, playAudio])
 
   const retry = useCallback(() => setRetryKey(k => k + 1), [])
@@ -175,19 +179,19 @@ export function useListeningPart4() {
     stopAudio()
     setPhase("submitting")
     try {
-      const matches = set.answers
+      const matchList = set.answers
         .map(place => {
           const letter = (userLetters[place.id] ?? "").toUpperCase()
-          const field = set.questions.find(q => q.text.toUpperCase() === letter)
+          const field  = set.questions.find(q => q.text.toUpperCase() === letter)
           return { question_id: place.id, answer_question_id: field?.id ?? 0 }
         })
         .filter(m => m.answer_question_id !== 0)
 
-      const res = await evaluateListeningPart4({ exam_id: eid, matches })
+      const res = await evaluateListeningPart4({ exam_id: eid, matches: matchList })
       setResult(res)
       setPhase("result")
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Noma'lum xatolik")
+      setErrorMsg(err?.response?.data?.detail ?? err?.message ?? "Noma'lum xatolik")
       setPhase("error")
     }
   }, [set, userLetters, stopAudio])

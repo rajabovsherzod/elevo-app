@@ -20,7 +20,46 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config;
 });
 
-// ─── Response: 401 da token yangilash ───────────────────────────────────────
+// ─── Telegram initData bilan yangi token olish ────────────────────────────────
+async function reAuthViaTelegram(): Promise<string | null> {
+  try {
+    const tg = (window as any).Telegram?.WebApp;
+    const initData = tg?.initData;
+    if (!initData) return null;
+
+    const { data } = await axios.post(`${API_BASE}${ENDPOINTS.auth.telegram}`, {
+      init_data: initData,
+    });
+
+    if (data?.access) {
+      setTokens(data.access, data.refresh ?? getRefreshToken() ?? "");
+      return data.access;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Refresh token bilan yangi token olish ────────────────────────────────────
+async function reAuthViaRefresh(): Promise<string | null> {
+  try {
+    const refresh = getRefreshToken();
+    if (!refresh) return null;
+
+    const { data } = await axios.post(`${API_BASE}${ENDPOINTS.auth.refresh}`, { refresh });
+
+    if (data?.access) {
+      setAccessToken(data.access);
+      return data.access;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Response: 401 da avtomatik qayta autentifikatsiya ───────────────────────
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (token: string) => void;
@@ -41,10 +80,16 @@ apiClient.interceptors.response.use(
       _retry?: boolean;
     };
 
-    if (original.url?.includes("auth") || error.response?.status !== 401 || original._retry) {
+    // Auth endpointlarini, 401 bo'lmaganlarni va allaqachon retry qilinganlarni o'tkazib yuboramiz
+    if (
+      original.url?.includes("/auth/") ||
+      error.response?.status !== 401 ||
+      original._retry
+    ) {
       return Promise.reject(error);
     }
 
+    // Parallel so'rovlar bo'lsa — ularni navbatga qo'yamiz
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         failedQueue.push({ resolve, reject });
@@ -58,22 +103,24 @@ apiClient.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const refresh = getRefreshToken();
-      if (!refresh) throw new Error("No refresh token");
+      // 1-urinish: Telegram initData bilan qayta autentifikatsiya (asosiy yo'l)
+      let newToken = await reAuthViaTelegram();
 
-      const { data } = await axios.post(`${API_BASE}${ENDPOINTS.auth.refresh}`, {
-        refresh,
-      });
+      // 2-urinish: refresh token bilan (zaxira yo'l)
+      if (!newToken) {
+        newToken = await reAuthViaRefresh();
+      }
 
-      setAccessToken(data.access);
-      flushQueue(null, data.access);
-      original.headers.Authorization = `Bearer ${data.access}`;
+      if (!newToken) {
+        // Ikkalasi ham ishlamadi — token tozalaymiz, so'rovni rad etamiz
+        clearTokens();
+        flushQueue(error, null);
+        return Promise.reject(error);
+      }
+
+      flushQueue(null, newToken);
+      original.headers.Authorization = `Bearer ${newToken}`;
       return apiClient(original);
-    } catch (err) {
-      flushQueue(err, null);
-      clearTokens();
-      if (typeof window !== "undefined") window.location.href = "/login";
-      return Promise.reject(err);
     } finally {
       isRefreshing = false;
     }
@@ -81,7 +128,7 @@ apiClient.interceptors.response.use(
 );
 
 // ─── Token helpers (localStorage) ───────────────────────────────────────────
-const ACCESS_KEY = "elevo_access";
+const ACCESS_KEY  = "elevo_access";
 const REFRESH_KEY = "elevo_refresh";
 
 export const getAccessToken = () =>

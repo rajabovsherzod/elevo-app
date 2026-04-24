@@ -12,7 +12,7 @@ import { useListeningPart4 }        from "./use-listening-part4"
 // ── Loading ───────────────────────────────────────────────────────────────────
 function LoadingBlock() {
   return (
-    <div className="flex flex-col gap-5 pb-6">
+    <div className="flex flex-col pb-6">
       <PageHeaderWithBack title="Part 4 — Map Matching" />
       <div className="flex items-center justify-center min-h-[60vh]">
         <ExamLoading />
@@ -208,13 +208,12 @@ export function ListeningPart4Content() {
       )}
 
       {/* Submit */}
-      {(canSubmit || phase === "submitting") && totalPlaces > 0 && (
+      {canSubmit && totalPlaces > 0 && (
         <div className="flex justify-end pt-2">
           <Button
             size="md"
             color="primary"
-            isLoading={phase === "submitting"}
-            isDisabled={phase === "submitting" || !allFilled}
+            isDisabled={!allFilled}
             onClick={submit}
           >
             Submit
