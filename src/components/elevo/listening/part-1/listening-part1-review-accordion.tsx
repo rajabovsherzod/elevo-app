@@ -70,13 +70,12 @@ export function ListeningPart1ReviewAccordion({ audioUrl, questions, result }: P
                             return (
                               <p
                                 key={a.id}
-                                className={`text-xs ${
-                                  isCorrectAns
+                                className={`text-xs ${isCorrectAns
                                     ? "text-green-600 font-bold"
                                     : isUserPick
-                                    ? "text-error font-bold"
-                                    : "text-on-surface-variant"
-                                }`}
+                                      ? "text-error font-bold"
+                                      : "text-on-surface-variant"
+                                  }`}
                               >
                                 <span className="font-bold text-on-surface">{letter}.</span> {text}
                                 {isCorrectAns && " ✓"}

@@ -241,6 +241,80 @@ export interface ListeningPart3EvaluateResponse {
   details: ListeningPart3AnswerDetail[]
 }
 
+// ── Part 4 Types ──────────────────────────────────────────────────────────────
+
+export interface ListeningPart4FieldItem {
+  id: number
+  text: string  // "A", "B", "C" ... (map position letter)
+}
+
+export interface ListeningPart4PlaceOption {
+  id: number
+  text: string  // "Restaurant", "School" ...
+}
+
+export interface ListeningPart4Set {
+  title: string | null
+  instruction: string | null
+  audio_url: string | null
+  image_url: string | null
+  questions: ListeningPart4FieldItem[]   // map field letters
+  answers: ListeningPart4PlaceOption[]   // 5 place names
+}
+
+export interface ListeningPart4QuestionsResponse {
+  exam_id: number
+  part: number
+  set: ListeningPart4Set
+}
+
+export interface ListeningPart4SubmitMatch {
+  question_id: number         // place name id (from answers)
+  answer_question_id: number  // field letter id (from questions)
+}
+
+export interface ListeningPart4EvaluateRequest {
+  exam_id: number
+  matches: ListeningPart4SubmitMatch[]
+}
+
+export interface ListeningPart4AnswerDetail {
+  question_id: number
+  answer_question_id: number
+  correct: boolean
+}
+
+export interface ListeningPart4EvaluateResponse {
+  correct_count: number
+  total_questions: number
+  score_percent: number
+  details: ListeningPart4AnswerDetail[]
+}
+
+// ── Part 4 API Functions ──────────────────────────────────────────────────────
+
+export async function getListeningPart4Questions(
+  examId?: number
+): Promise<ListeningPart4QuestionsResponse> {
+  const params: Record<string, unknown> = examId ? { exam_id: examId } : {}
+  params._t = Date.now()
+  const { data } = await apiClient.get<ListeningPart4QuestionsResponse>(
+    ENDPOINTS.listening.part(4).question,
+    { params }
+  )
+  return data
+}
+
+export async function evaluateListeningPart4(
+  payload: ListeningPart4EvaluateRequest
+): Promise<ListeningPart4EvaluateResponse> {
+  const { data } = await apiClient.post<ListeningPart4EvaluateResponse>(
+    ENDPOINTS.listening.part(4).evaluate,
+    payload
+  )
+  return data
+}
+
 // ── Part 3 API Functions ──────────────────────────────────────────────────────
 
 export async function getListeningPart3Questions(

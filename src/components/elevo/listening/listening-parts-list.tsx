@@ -1,4 +1,4 @@
-import { Mic2, Radio, Users, GraduationCap, Layers, FileText } from "lucide-react"
+import { Mic2, Radio, Users, MapPin, Layers, FileText } from "lucide-react"
 import { ListeningPartCard } from "./listening-part-card"
 import type { ListeningPart } from "./listening-part-card"
 
@@ -29,10 +29,10 @@ const PARTS: ListeningPart[] = [
   },
   {
     id: "4",
-    title: "Academic Lectures",
+    title: "Map Matching",
     level: "B2–C1",
     levelColor: "#10b981",
-    icon: GraduationCap,
+    icon: MapPin,
     href: "/listening/part-4",
   },
   {

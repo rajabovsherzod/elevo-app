@@ -117,7 +117,7 @@ const OptionsAccordion = memo(function OptionsAccordion({
             <div className="px-4 pb-4 pt-1 flex flex-col gap-3">
               {options.map((opt, i) => (
                 <div key={opt.id} className="flex gap-3">
-                  <span className="w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center bg-surface-container text-on-surface flex-shrink-0 mt-0.5">
+                  <span className="w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center bg-indigo-500 text-white flex-shrink-0 mt-0.5">
                     {String.fromCharCode(65 + i)}
                   </span>
                   <p className="text-xs text-on-surface leading-relaxed">{opt.text}</p>

@@ -3,6 +3,7 @@
 import { Button }                    from "@/components/base/buttons/button"
 import { PageHeaderWithBack }        from "@/components/elevo/shared/page-header-with-back"
 import { ExamLoading }               from "@/components/elevo/shared/exam-loading"
+import { CalculatingResults }        from "@/components/elevo/shared"
 import { useReadingPart4 }           from "./use-reading-part4"
 import { ReadingPart1Timer }         from "./reading-part1-timer"
 import { ReadingPart4Text }          from "./reading-part4-text"
@@ -32,6 +33,13 @@ export function ReadingPart4Content() {
       </div>
     )
   }
+
+  if (submitting) return (
+    <div className="flex flex-col gap-5 pb-6">
+      <PageHeaderWithBack title="Part 4 — Comprehension" rightContent={undefined} />
+      <CalculatingResults />
+    </div>
+  )
 
   if (!questionData) {
     return (

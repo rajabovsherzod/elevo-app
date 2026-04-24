@@ -3,6 +3,7 @@
 import { Button }               from "@/components/base/buttons/button"
 import { PageHeaderWithBack }   from "@/components/elevo/shared/page-header-with-back"
 import { ExamLoading }          from "@/components/elevo/shared/exam-loading"
+import { CalculatingResults }   from "@/components/elevo/shared"
 import { ListeningAudioBar, ListeningInstruction } from "@/components/elevo/listening/shared"
 import { ListeningPart1Mcq }    from "./listening-part1-mcq"
 import { ListeningPart1Result } from "./listening-part1-result"
@@ -74,6 +75,13 @@ export function ListeningPart1Content() {
       />
     )
   }
+
+  if (phase === "submitting") return (
+    <div className="flex flex-col gap-5 pb-6">
+      <PageHeaderWithBack title="Part 1 — Short Conversations" />
+      <CalculatingResults />
+    </div>
+  )
 
   // ── Phase: result ────────────────────────────────────────────────────────────
   if (phase === "result" && result) {
