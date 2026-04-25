@@ -5,8 +5,8 @@ import { PageHeaderWithBack }      from "@/components/elevo/shared/page-header-w
 import { ExamLoading }             from "@/components/elevo/shared/exam-loading"
 import { CalculatingResults }      from "@/components/elevo/shared"
 import { ErrorCard }               from "@/components/elevo/shared/error-card"
-import { useReadingPart1 }         from "./use-reading-part1"
-import { ReadingPart1Timer }       from "./reading-part1-timer"
+import { ExamTimer }               from "@/components/elevo/shared/exam-timer"
+import { useReadingPart1 }         from "@/hooks/reading/part-1/use-reading-part1"
 import { ReadingPart1Text }        from "./reading-part1-text"
 import { ReadingPart1Result }      from "./reading-part1-result"
 
@@ -79,7 +79,7 @@ export function ReadingPart1Content() {
         title="Part 1.1 — Gap Filling"
         rightContent={
           !result
-            ? <ReadingPart1Timer timeLeft={timeLeft} formatTime={formatTime} />
+            ? <ExamTimer timeLeft={timeLeft} formatTime={formatTime} />
             : undefined
         }
       />

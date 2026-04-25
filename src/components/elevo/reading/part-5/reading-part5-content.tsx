@@ -5,8 +5,8 @@ import { Button } from "@/components/base/buttons/button"
 import { PageHeaderWithBack } from "@/components/elevo/shared/page-header-with-back"
 import { ExamLoading } from "@/components/elevo/shared/exam-loading"
 import { CalculatingResults } from "@/components/elevo/shared"
-import { useReadingPart5 } from "./use-reading-part5"
-import { ReadingPart1Timer } from "./reading-part1-timer"
+import { ExamTimer } from "@/components/elevo/shared/exam-timer"
+import { useReadingPart5 } from "@/hooks/reading/part-5/use-reading-part5"
 import { ReadingPart5Text } from "./reading-part5-text"
 import { ReadingPart5GapFilling } from "./reading-part5-gap-filling"
 import { ReadingPart5MCQQuestions } from "./reading-part5-mcq-questions"
@@ -61,7 +61,7 @@ export function ReadingPart5Content() {
         title="Part 5 — Summary & MCQ"
         rightContent={
           !result
-            ? <ReadingPart1Timer timeLeft={timeLeft} formatTime={formatTime} />
+            ? <ExamTimer timeLeft={timeLeft} formatTime={formatTime} />
             : undefined
         }
       />

@@ -1,5 +1,16 @@
 import { apiClient } from "./client"
 import { ENDPOINTS } from "./endpoints"
+import { validateData } from "@/lib/utils/validation"
+import {
+  ReadingPart1ResponseSchema,
+  ReadingPart1EvaluateResponseSchema,
+  ReadingPart2ResponseSchema,
+  ReadingPart2EvaluateResponseSchema,
+  ReadingPart3ResponseSchema,
+  ReadingPart3EvaluateResponseSchema,
+  ReadingPart4ResponseSchema,
+  ReadingPart4EvaluateResponseSchema,
+} from "@/lib/schemas/reading"
 
 export interface ReadingPart1Question {
   id: number
@@ -52,7 +63,9 @@ export async function getReadingPart1Question(
     ENDPOINTS.reading.part(1).question,
     { params }
   )
-  return data
+  
+  // Validate response
+  return validateData(ReadingPart1ResponseSchema, data, 'Reading Part 1 Question')
 }
 
 // ── Part 2 ──────────────────────────────────────────────────────────────────
@@ -65,7 +78,6 @@ export interface ReadingPart2AnswerOption {
 export interface ReadingPart2Set {
   title: string | null
   instruction: string | null
-  text: string | null
   questions: ReadingPart2AnswerOption[]  // A-J (10 ta questions)
   answers: ReadingPart2AnswerOption[]    // 1-8 (8 ta passages)
 }
@@ -111,7 +123,9 @@ export async function getReadingPart2Question(
     ENDPOINTS.reading.part(2).question,
     { params }
   )
-  return data
+  
+  // Validate response
+  return validateData(ReadingPart2ResponseSchema, data, 'Reading Part 2 Question')
 }
 
 export async function evaluateReadingPart2(
@@ -121,7 +135,9 @@ export async function evaluateReadingPart2(
     ENDPOINTS.reading.part(2).evaluate,
     payload
   )
-  return data
+  
+  // Validate response
+  return validateData(ReadingPart2EvaluateResponseSchema, data, 'Reading Part 2 Evaluate')
 }
 
 // ── Part 3 ──────────────────────────────────────────────────────────────────
@@ -179,7 +195,9 @@ export async function getReadingPart3Question(
     ENDPOINTS.reading.part(3).question,
     { params }
   )
-  return data
+  
+  // Validate response
+  return validateData(ReadingPart3ResponseSchema, data, 'Reading Part 3 Question')
 }
 
 export async function evaluateReadingPart3(
@@ -189,7 +207,9 @@ export async function evaluateReadingPart3(
     ENDPOINTS.reading.part(3).evaluate,
     payload
   )
-  return data
+  
+  // Validate response
+  return validateData(ReadingPart3EvaluateResponseSchema, data, 'Reading Part 3 Evaluate')
 }
 
 // ── Part 1 evaluate ─────────────────────────────────────────────────────────
@@ -201,7 +221,9 @@ export async function evaluateReadingPart1(
     ENDPOINTS.reading.part(1).evaluate,
     payload
   )
-  return data
+  
+  // Validate response
+  return validateData(ReadingPart1EvaluateResponseSchema, data, 'Reading Part 1 Evaluate')
 }
 
 // ── Part 4 ──────────────────────────────────────────────────────────────────
@@ -266,7 +288,9 @@ export async function getReadingPart4Question(
     ENDPOINTS.reading.part(4).question,
     { params }
   )
-  return data
+  
+  // Validate response
+  return validateData(ReadingPart4ResponseSchema, data, 'Reading Part 4 Question')
 }
 
 export async function evaluateReadingPart4(
@@ -276,5 +300,7 @@ export async function evaluateReadingPart4(
     ENDPOINTS.reading.part(4).evaluate,
     payload
   )
-  return data
+  
+  // Validate response
+  return validateData(ReadingPart4EvaluateResponseSchema, data, 'Reading Part 4 Evaluate')
 }

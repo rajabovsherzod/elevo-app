@@ -1,11 +1,11 @@
 import { Clock } from "lucide-react"
 
-interface ReadingPart1TimerProps {
+interface ExamTimerProps {
   timeLeft: number
   formatTime: (s: number) => string
 }
 
-export function ReadingPart1Timer({ timeLeft, formatTime }: ReadingPart1TimerProps) {
+export function ExamTimer({ timeLeft, formatTime }: ExamTimerProps) {
   const isLow = timeLeft <= 60
 
   return (

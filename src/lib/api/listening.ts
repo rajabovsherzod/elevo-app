@@ -311,6 +311,62 @@ export async function evaluateListeningPart3(
   return data
 }
 
+// ── Part 5 Types ──────────────────────────────────────────────────────────────
+
+export interface ListeningPart5AnswerOption {
+  id: number
+  answer: string
+  is_correct: boolean
+}
+
+export interface ListeningPart5Question {
+  id: number
+  question: string
+  answers: ListeningPart5AnswerOption[]
+}
+
+export interface ListeningPart5Extract {
+  id: number
+  extract: string
+  title: string | null
+  instruction: string | null
+  audio_url: string | null
+  questions: ListeningPart5Question[]
+}
+
+export interface ListeningPart5QuestionsResponse {
+  exam_id: number
+  part: number
+  instruction: string | null
+  audio_url: string | null
+  extracts: ListeningPart5Extract[]
+}
+
+export interface ListeningPart5SubmitAnswer {
+  question_id: number
+  answer_id: number
+}
+
+export interface ListeningPart5EvaluateRequest {
+  exam_id: number
+  answers: ListeningPart5SubmitAnswer[]
+}
+
+export interface ListeningPart5AnswerDetail {
+  question_id: number
+  answer_id: number
+  correct: boolean
+  correct_answer_id: number | null
+  correct_answer_text: string | null
+}
+
+export interface ListeningPart5EvaluateResponse {
+  correct_count: number
+  total_questions: number
+  score_percent: number
+  details: ListeningPart5AnswerDetail[]
+}
+
 // ── Part 4 API Functions ──────────────────────────────────────────────────────
 
 export async function getListeningPart4Questions(
@@ -333,4 +389,174 @@ export async function evaluateListeningPart4(
     payload
   )
   return data
+}
+
+// ── Part 5 API Functions ──────────────────────────────────────────────────────
+
+export async function getListeningPart5Questions(
+  examId?: number
+): Promise<ListeningPart5QuestionsResponse> {
+  const params: Record<string, unknown> = examId ? { exam_id: examId } : {}
+  params._t = Date.now()
+  const { data } = await apiClient.get<any>(
+    ENDPOINTS.listening.part(5).question,
+    { params }
+  )
+
+  // Transform backend response to match frontend types
+  const rawExtracts = data.extracts || []
+  const extracts: ListeningPart5Extract[] = rawExtracts.map((ext: any, idx: number) => ({
+    id: idx + 1,
+    extract: ext.extract || `EXTRACT_${idx + 1}`,
+    title: ext.extract || `Extract ${idx + 1}`,
+    instruction: data.instruction || null,
+    audio_url: data.audio_url || ext.audio_url || null,
+    questions: (ext.questions || []).map((q: any) => ({
+      id: q.id,
+      question: q.question || q.text || '',
+      answers: (q.answers || []).map((a: any) => ({
+        id: a.id,
+        answer: a.answer || a.text || '',
+        is_correct: a.is_correct || false,
+      })),
+    })),
+  }))
+
+  return {
+    exam_id: data.exam_id || 0,
+    part: 5,
+    instruction: data.instruction || null,
+    audio_url: data.audio_url || null,
+    extracts,
+  }
+}
+
+export async function evaluateListeningPart5(
+  payload: ListeningPart5EvaluateRequest
+): Promise<ListeningPart5EvaluateResponse> {
+  const { data } = await apiClient.post<any>(
+    ENDPOINTS.listening.part(5).evaluate,
+    payload
+  )
+
+  // Transform backend response
+  const rawDetails: any[] = data.details || []
+  const details: ListeningPart5AnswerDetail[] = rawDetails.map(d => ({
+    question_id: d.question_id || 0,
+    answer_id: d.answer_id || 0,
+    correct: d.correct ?? d.is_correct ?? false,
+    correct_answer_id: d.correct_answer_id ?? null,
+    correct_answer_text: d.correct_answer_text ?? null,
+  }))
+
+  return {
+    correct_count: data.correct_count ?? 0,
+    total_questions: data.total_questions ?? details.length,
+    score_percent: data.score_percent ?? 0,
+    details,
+  }
+}
+
+// ── Part 6 Types ──────────────────────────────────────────────────────────────
+
+export interface ListeningPart6Question {
+  id: number
+  title: string | null
+  instruction: string | null
+  text: string | null
+  positions: number[]
+  audio_url: string | null
+}
+
+export interface ListeningPart6QuestionsResponse {
+  exam_id: number
+  part: number
+  question: ListeningPart6Question
+}
+
+export interface ListeningPart6SubmitAnswer {
+  question_id: number
+  position: number
+  answer: string
+}
+
+export interface ListeningPart6EvaluateRequest {
+  exam_id: number
+  answers: ListeningPart6SubmitAnswer[]
+}
+
+export interface ListeningPart6AnswerDetail {
+  question_id: number
+  position: number
+  answer: string
+  correct: boolean
+  correct_answer?: string | null
+}
+
+export interface ListeningPart6EvaluateResponse {
+  correct_count: number
+  total_questions: number
+  score_percent: number
+  details: ListeningPart6AnswerDetail[]
+}
+
+// ── Part 6 API Functions ──────────────────────────────────────────────────────
+
+export async function getListeningPart6Questions(
+  examId?: number
+): Promise<ListeningPart6QuestionsResponse> {
+  const params: Record<string, unknown> = examId ? { exam_id: examId } : {}
+  params._t = Date.now()
+
+  const { data } = await apiClient.get<any>(
+    ENDPOINTS.listening.part(6).question,
+    { params }
+  )
+
+  const raw = data.question ?? {}
+  const rawPositions: any[] = Array.isArray(raw.positions)
+    ? raw.positions
+    : typeof raw.positions === "string"
+      ? JSON.parse(raw.positions)
+      : []
+
+  const q: ListeningPart6Question = {
+    id:          raw.id          ?? 0,
+    title:       raw.title       ?? null,
+    instruction: raw.instruction ?? null,
+    text:        raw.question    ?? null,  // Backend uses 'question' field for text
+    positions:   rawPositions,
+    audio_url:   raw.audio_url   ?? null,
+  }
+
+  return {
+    exam_id:  data.exam_id ?? 0,
+    part:     data.part    ?? 6,
+    question: q,
+  }
+}
+
+export async function evaluateListeningPart6(
+  payload: ListeningPart6EvaluateRequest
+): Promise<ListeningPart6EvaluateResponse> {
+  const { data } = await apiClient.post<any>(
+    ENDPOINTS.listening.part(6).evaluate,
+    payload
+  )
+
+  const rawDetails: any[] = data.details ?? []
+  const details: ListeningPart6AnswerDetail[] = rawDetails.map(d => ({
+    question_id:    d.question_id ?? 0,
+    position:       d.position    ?? 0,
+    answer:         d.answer      ?? "",
+    correct:        d.correct     ?? d.is_correct ?? false,
+    correct_answer: d.correct_answer ?? null,
+  }))
+
+  return {
+    correct_count:   data.correct_count   ?? 0,
+    total_questions: data.total_questions ?? details.length,
+    score_percent:   data.score_percent   ?? 0,
+    details,
+  }
 }

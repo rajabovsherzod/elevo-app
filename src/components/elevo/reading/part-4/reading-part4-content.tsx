@@ -4,8 +4,8 @@ import { Button }                    from "@/components/base/buttons/button"
 import { PageHeaderWithBack }        from "@/components/elevo/shared/page-header-with-back"
 import { ExamLoading }               from "@/components/elevo/shared/exam-loading"
 import { CalculatingResults }        from "@/components/elevo/shared"
-import { useReadingPart4 }           from "./use-reading-part4"
-import { ReadingPart1Timer }         from "./reading-part1-timer"
+import { ExamTimer }                 from "@/components/elevo/shared/exam-timer"
+import { useReadingPart4 }           from "@/hooks/reading/part-4/use-reading-part4"
 import { ReadingPart4Text }          from "./reading-part4-text"
 import { ReadingPart4McqQuestions }  from "./reading-part4-mcq-questions"
 import { ReadingPart4TfngQuestions } from "./reading-part4-tfng-questions"
@@ -62,7 +62,7 @@ export function ReadingPart4Content() {
         title="Part 4 — Comprehension"
         rightContent={
           !result
-            ? <ReadingPart1Timer timeLeft={timeLeft} formatTime={formatTime} />
+            ? <ExamTimer timeLeft={timeLeft} formatTime={formatTime} />
             : undefined
         }
       />

@@ -2,8 +2,8 @@
 
 import { BookOpen } from "lucide-react"
 import { PageHeader } from "@/components/elevo/shared/page-header"
-import { FullMockCard } from "@/components/elevo/reading/full-mock-card"
-import { ReadingPartsList } from "@/components/elevo/reading/reading-parts-list"
+import { FullMockCard } from "@/components/elevo/reading/shared/full-mock-card"
+import { ReadingPartsList } from "@/components/elevo/reading/shared/reading-parts-list"
 
 export default function ReadingPage() {
   return (
