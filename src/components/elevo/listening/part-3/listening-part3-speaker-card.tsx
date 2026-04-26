@@ -1,7 +1,7 @@
 "use client"
 
 import { memo } from "react"
-import { CheckCircle2, XCircle } from "lucide-react"
+import { CheckCircle2, XCircle } from "@/lib/icons"
 import { cx } from "@/utils/cx"
 import type {
   ListeningPart3QuestionItem,
@@ -54,7 +54,7 @@ export const ListeningPart3SpeakerCard = memo(function ListeningPart3SpeakerCard
       </div>
 
       {/* A-F option chips — full width grid */}
-      <div className="grid grid-cols-6 gap-1.5">
+      <div className="grid grid-cols-6 gap-1.5" role="radiogroup" aria-label={`Speaker ${speakerIndex + 1} options`}>
         {options.map((opt, i) => {
           const letter    = String.fromCharCode(65 + i)
           const selected  = selectedAnswerId === opt.id
@@ -65,6 +65,10 @@ export const ListeningPart3SpeakerCard = memo(function ListeningPart3SpeakerCard
             <button
               key={opt.id}
               type="button"
+              role="radio"
+              aria-checked={selected}
+              aria-label={`Speaker ${speakerIndex + 1}, Option ${letter}`}
+              aria-disabled={isLocked || !!result}
               disabled={isLocked || !!result}
               onClick={() => onSelect(speaker.id, opt.id)}
               className={cx(

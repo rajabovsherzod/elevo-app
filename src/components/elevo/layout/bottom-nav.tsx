@@ -7,8 +7,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, BookOpen, Sparkles, TrendingUp, User } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
+import { Home, BookOpen, Sparkles, TrendingUp, User, type LucideIcon } from "@/lib/icons"
 
 interface NavItem {
   href: string

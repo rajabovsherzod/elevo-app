@@ -1,48 +1,82 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { lazy, Suspense, useMemo } from "react"
 import { Button } from "@/components/base/buttons/button"
-import { PageHeaderWithBack } from "@/components/elevo/shared/page-header-with-back"
 import { ExamLoading } from "@/components/elevo/shared/exam-loading"
-import { CalculatingResults } from "@/components/elevo/shared"
+import { CalculatingResults } from "@/components/elevo/shared/calculating-results"
+import { ErrorCard } from "@/components/elevo/shared/error-card"
 import { ExamTimer } from "@/components/elevo/shared/exam-timer"
 import { useReadingPart5 } from "@/hooks/reading/part-5/use-reading-part5"
 import { ReadingPart5Text } from "./reading-part5-text"
 import { ReadingPart5GapFilling } from "./reading-part5-gap-filling"
 import { ReadingPart5MCQQuestions } from "./reading-part5-mcq-questions"
-import { ReadingPart5Result } from "./reading-part5-result"
-import { ReadingPart5ReviewAccordion } from "./reading-part5-review-accordion"
+
+const ReadingPart5Result = lazy(() =>
+  import("./reading-part5-result").then((mod) => ({
+    default: mod.ReadingPart5Result,
+  }))
+)
+
+const ReadingPart5ReviewAccordion = lazy(() =>
+  import("./reading-part5-review-accordion").then((mod) => ({
+    default: mod.ReadingPart5ReviewAccordion,
+  }))
+)
 
 export function ReadingPart5Content() {
   const {
-    loading, submitting, questionData,
-    gapAnswers, mcqAnswers, result, timeLeft,
-    allAnswered, formatTime,
-    handleGapChange, handleMcqSelect, handleSubmit,
-    gapFillings, mcqQuestions,
+    loading,
+    submitting,
+    questionData,
+    gapAnswers,
+    mcqAnswers,
+    result,
+    error,
+    allAnswered,
+    timeLeft,
+    formatTime,
+    handleGapChange,
+    handleMcqSelect,
+    handleSubmit,
+    gapFillings,
+    mcqQuestions,
+    retry,
   } = useReadingPart5()
 
+  const { text } = questionData || {}
+
+  // Memoize showTimer to prevent unnecessary re-renders
+  const showTimer = useMemo(
+    () => !loading && !error && !submitting && !result,
+    [loading, error, submitting, result]
+  )
+
+  // Loading state
   if (loading) {
     return (
-      <div className="flex flex-col gap-5 pb-6">
-        <PageHeaderWithBack
-          title="Part 5 — Summary & MCQ"
-          rightContent={undefined}
-        />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <ExamLoading />
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <ExamLoading />
       </div>
     )
   }
 
-  if (submitting) return (
-    <div className="flex flex-col gap-5 pb-6">
-      <PageHeaderWithBack title="Part 5 — Summary & MCQ" rightContent={undefined} />
-      <CalculatingResults />
-    </div>
-  )
+  // Error state
+  if (error) {
+    return (
+      <ErrorCard
+        error={error}
+        onRetry={retry}
+        onBack={() => window.history.back()}
+      />
+    )
+  }
 
+  // Submitting state
+  if (submitting) {
+    return <CalculatingResults />
+  }
+
+  // No data state
   if (!questionData) {
     return (
       <div className="elevo-card elevo-card-border p-8 flex flex-col items-center gap-3 text-center">
@@ -53,31 +87,28 @@ export function ReadingPart5Content() {
     )
   }
 
-  const { text } = questionData
-
+  // Main content
   return (
-    <div className="flex flex-col gap-5 pb-6 animate-fade-in">
-      <PageHeaderWithBack
-        title="Part 5 — Summary & MCQ"
-        rightContent={
-          !result
-            ? <ExamTimer timeLeft={timeLeft} formatTime={formatTime} />
-            : undefined
-        }
-      />
+    <div className="flex flex-col gap-5 animate-fade-in">
+      {/* Fixed Timer - only show during exam */}
+      {showTimer && (
+        <div className="fixed top-4 right-4 z-50">
+          <ExamTimer timeLeft={timeLeft} formatTime={formatTime} />
+        </div>
+      )}
 
       {!result ? (
         <>
           {/* Main Text */}
           <ReadingPart5Text
-            title={text.title}
-            instruction={text.instruction}
-            text={text.text}
+            title={text?.title || ""}
+            instruction={text?.instruction || ""}
+            text={text?.text || ""}
           />
 
           {/* Gap Filling (Questions 1-4) */}
           <ReadingPart5GapFilling
-            summaryText={text.summary_text}
+            summaryText={text?.summary_text || ""}
             gapFillings={gapFillings}
             answers={gapAnswers}
             onAnswerChange={handleGapChange}
@@ -111,15 +142,18 @@ export function ReadingPart5Content() {
         </>
       ) : (
         <>
-          <ReadingPart5Result
-            result={result}
-            questionData={questionData}
-          />
-          
+          <Suspense
+            fallback={<div className="elevo-card p-8 animate-pulse">Loading results...</div>}
+          >
+            <ReadingPart5Result result={result} questionData={questionData!} />
+          </Suspense>
+
           {/* Review Accordion */}
-          <ReadingPart5ReviewAccordion
-            questionData={questionData}
-          />
+          <Suspense
+            fallback={<div className="elevo-card p-8 animate-pulse">Loading review...</div>}
+          >
+            <ReadingPart5ReviewAccordion questionData={questionData!} />
+          </Suspense>
         </>
       )}
     </div>

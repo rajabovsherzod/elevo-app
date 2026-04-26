@@ -1,6 +1,6 @@
 "use client"
 
-import { Headphones } from "lucide-react"
+import { Headphones } from "@/lib/icons"
 import { PageHeader } from "@/components/elevo/shared/page-header"
 import { ListeningPartsList } from "@/components/elevo/listening/listening-parts-list"
 

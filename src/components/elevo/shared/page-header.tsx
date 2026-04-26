@@ -4,7 +4,7 @@
    Solid card bg, follows design system
    ═══════════════════════════════════════ */
 
-import type { LucideIcon } from "lucide-react"
+import type { LucideIcon } from "@/lib/icons"
 import type { ReactNode } from "react"
 
 interface PageHeaderProps {

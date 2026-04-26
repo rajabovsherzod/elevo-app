@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronUp } from "@/lib/icons"
 import { AnimatePresence, motion } from "framer-motion"
 import { ListeningPart1AudioPlayer } from "./listening-part1-audio-player"
 import type { ListeningPart1EvaluateResponse, ListeningPart1Question } from "@/lib/api/listening"
@@ -63,19 +63,21 @@ export function ListeningPart1ReviewAccordion({ audioUrl, questions, result }: P
                         <div className="pl-6 flex flex-col gap-1.5">
                           {q.answers.map((a) => {
                             const isUserPick = detail?.answer_id === a.id
-                            const isCorrectAns = detail?.correct_answer_id === a.id
+                            const isCorrectAns = (detail as any)?.correct_answer_id === a.id
                             const letter = a.answer.charAt(0)
                             const text = a.answer.slice(3)
+
+                            let textColorClass = "text-on-surface-variant"
+                            if (isCorrectAns) {
+                              textColorClass = "text-green-600 font-bold"
+                            } else if (isUserPick) {
+                              textColorClass = "text-error font-bold"
+                            }
 
                             return (
                               <p
                                 key={a.id}
-                                className={`text-xs ${isCorrectAns
-                                    ? "text-green-600 font-bold"
-                                    : isUserPick
-                                      ? "text-error font-bold"
-                                      : "text-on-surface-variant"
-                                  }`}
+                                className={`text-xs ${textColorClass}`}
                               >
                                 <span className="font-bold text-on-surface">{letter}.</span> {text}
                                 {isCorrectAns && " ✓"}

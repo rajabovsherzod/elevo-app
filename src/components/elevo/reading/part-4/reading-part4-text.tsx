@@ -1,10 +1,12 @@
+import { memo } from "react"
+
 interface ReadingPart4TextProps {
   title: string | null
   instruction: string | null
   text: string
 }
 
-export function ReadingPart4Text({ title, instruction, text }: ReadingPart4TextProps) {
+export const ReadingPart4Text = memo(function ReadingPart4Text({ title, instruction, text }: ReadingPart4TextProps) {
   return (
     <div className="flex flex-col gap-4">
       {/* Title */}
@@ -33,4 +35,4 @@ export function ReadingPart4Text({ title, instruction, text }: ReadingPart4TextP
       </div>
     </div>
   )
-}
+})

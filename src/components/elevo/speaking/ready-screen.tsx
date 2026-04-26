@@ -2,7 +2,7 @@
    ReadyScreen — "Are you ready?" screen
    ═══════════════════════════════════════ */
 
-import { Play, ChevronLeft } from "lucide-react"
+import { Play, ChevronLeft } from "@/lib/icons"
 
 interface ReadyScreenProps {
   title: string

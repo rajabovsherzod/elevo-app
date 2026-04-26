@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useEffect, useState, memo } from "react"
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp } from "lucide-react"
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp } from "@/lib/icons"
 import { AnimatePresence, motion } from "framer-motion"
 import { cx } from "@/utils/cx"
 import type { ListeningPart6EvaluateResponse, ListeningPart6Question } from "@/lib/api/listening"

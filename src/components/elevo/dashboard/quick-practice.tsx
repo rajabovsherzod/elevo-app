@@ -4,8 +4,7 @@
    ═══════════════════════════════════════ */
 
 import Link from "next/link"
-import { FileText, Languages, MessagesSquare, BookOpen, ChevronRight } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
+import { FileText, Languages, MessagesSquare, BookOpen, ChevronRight, type LucideIcon } from "@/lib/icons"
 
 interface PracticeItem {
   href: string

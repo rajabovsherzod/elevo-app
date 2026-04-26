@@ -2,7 +2,7 @@
    Payment Plans Configuration
    ═══════════════════════════════════════ */
 
-import { BookOpen, Headphones, Mic, PenLine, Sparkles, type LucideIcon } from "lucide-react"
+import { BookOpen, Headphones, Mic, PenLine, Sparkles, type LucideIcon } from "@/lib/icons"
 
 export interface PaymentPlan {
   id: string

@@ -7,7 +7,7 @@
    Inner content: max-w-[800px] centered.
    ═══════════════════════════════════════ */
 
-import { GraduationCap } from "lucide-react"
+import { GraduationCap } from "@/lib/icons"
 
 /* ── Logo ─────────────────────────────────────────── */
 

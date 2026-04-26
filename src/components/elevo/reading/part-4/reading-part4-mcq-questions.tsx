@@ -1,5 +1,7 @@
+import { memo } from "react"
 import { cx } from "@/utils/cx"
 import type { ReadingPart4QuestionItem } from "@/lib/api/reading"
+import { getQuestionAriaLabel, getAnswerAriaLabel } from "@/lib/utils/a11y"
 
 interface ReadingPart4McqQuestionsProps {
   questions: ReadingPart4QuestionItem[]
@@ -8,7 +10,7 @@ interface ReadingPart4McqQuestionsProps {
   disabled: boolean
 }
 
-export function ReadingPart4McqQuestions({
+export const ReadingPart4McqQuestions = memo(function ReadingPart4McqQuestions({
   questions,
   answers,
   onSelect,
@@ -22,33 +24,57 @@ export function ReadingPart4McqQuestions({
         </p>
       </div>
 
-      <div className="flex flex-col gap-4 p-4">
+      <div 
+        className="flex flex-col gap-4 p-4"
+        role="region"
+        aria-label="Multiple choice questions"
+      >
         {questions.map((q, qi) => {
           const questionNumber = qi + 1
           const selectedAnswerId = answers[q.id]
 
           return (
-            <div key={q.id} className="flex flex-col gap-3">
+            <div 
+              key={q.id} 
+              className="flex flex-col gap-3"
+              role="group"
+              aria-labelledby={`question-${q.id}-text`}
+            >
               {/* Question */}
               <div className="flex items-start gap-3">
-                <span className="w-7 h-7 rounded-lg text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 bg-primary text-white shadow-sm">
+                <span 
+                  className="w-7 h-7 rounded-lg text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 bg-primary text-white shadow-sm"
+                  aria-hidden="true"
+                >
                   {questionNumber}
                 </span>
-                <p className="text-sm font-semibold text-on-surface leading-relaxed flex-1">
+                <p 
+                  id={`question-${q.id}-text`}
+                  className="text-sm font-semibold text-on-surface leading-relaxed flex-1"
+                >
                   {q.question}
                 </p>
               </div>
 
               {/* Answer Options (A, B, C, D) */}
-              <div className="grid grid-cols-1 gap-2 pl-10">
+              <div 
+                className="grid grid-cols-1 gap-2 pl-10"
+                role="radiogroup"
+                aria-labelledby={`question-${q.id}-text`}
+                aria-required="true"
+              >
                 {q.answers.map((answer, ai) => {
                   const letter = String.fromCharCode(65 + ai)  // A, B, C, D
                   const isSelected = selectedAnswerId === answer.id
+                  const ariaLabel = getAnswerAriaLabel(letter, answer.answer, isSelected)
 
                   return (
                     <button
                       key={answer.id}
                       type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      aria-label={ariaLabel}
                       disabled={disabled}
                       onClick={() => onSelect(q.id, answer.id)}
                       className={cx(
@@ -66,7 +92,9 @@ export function ReadingPart4McqQuestions({
                         isSelected
                           ? "bg-white/20 text-white"
                           : "bg-surface-container-high text-on-surface-variant",
-                      )}>
+                      )}
+                      aria-hidden="true"
+                      >
                         {letter}
                       </span>
                       <span className="flex-1">{answer.answer}</span>
@@ -80,4 +108,4 @@ export function ReadingPart4McqQuestions({
       </div>
     </div>
   )
-}
+})

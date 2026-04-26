@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import {
   getListeningPart4Questions,
   evaluateListeningPart4,
@@ -196,14 +196,20 @@ export function useListeningPart4() {
     }
   }, [set, userLetters, stopAudio])
 
-  const filledCount = set
-    ? set.answers.filter(p => {
-        const letter = (userLetters[p.id] ?? "").toUpperCase()
-        return letter && set.questions.some(q => q.text.toUpperCase() === letter)
-      }).length
-    : 0
+  const filledCount = useMemo(() => 
+    set
+      ? set.answers.filter(p => {
+          const letter = (userLetters[p.id] ?? "").toUpperCase()
+          return letter && set.questions.some(q => q.text.toUpperCase() === letter)
+        }).length
+      : 0,
+    [set, userLetters]
+  )
 
-  const allFilled = set ? filledCount === set.answers.length : false
+  const allFilled = useMemo(() => 
+    set ? filledCount === set.answers.length : false,
+    [set, filledCount]
+  )
 
   return {
     phase, set, audioUrl, imageUrl, userLetters, result,

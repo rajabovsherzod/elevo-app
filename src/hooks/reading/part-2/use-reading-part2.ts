@@ -76,7 +76,7 @@ export function useReadingPart2() {
     }))
 
     await submitter.submit({ exam_id: qd.exam_id, matches: matchesArray })
-  }, [submitter])
+  }, [submitter.submit])
 
   const passages = questionData?.set.answers ?? []
   const allMatched = passages.length > 0 && passages.every((p) => matches[p.id] !== undefined)

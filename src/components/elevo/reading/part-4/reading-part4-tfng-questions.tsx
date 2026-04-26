@@ -1,3 +1,4 @@
+import { memo } from "react"
 import { cx } from "@/utils/cx"
 import type { ReadingPart4QuestionItem } from "@/lib/api/reading"
 
@@ -9,7 +10,7 @@ interface ReadingPart4TfngQuestionsProps {
   startNumber: number  // MCQ tugagan raqamdan boshlanadi (5)
 }
 
-export function ReadingPart4TfngQuestions({
+export const ReadingPart4TfngQuestions = memo(function ReadingPart4TfngQuestions({
   questions,
   answers,
   onSelect,
@@ -77,4 +78,4 @@ export function ReadingPart4TfngQuestions({
       </div>
     </div>
   )
-}
+})

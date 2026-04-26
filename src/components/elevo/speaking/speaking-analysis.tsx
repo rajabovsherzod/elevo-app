@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import {
   CheckCircle2, ChevronRight, TrendingUp,
   BookOpen, Layers, Volume2, Zap, Clock, Hash, Wind, FileText,
-} from "lucide-react"
+} from "@/lib/icons"
 import type { SpeakingEvaluateResponseSchema } from "@/schemas/speaking.schema"
 
 interface SpeakingAnalysisProps {

@@ -7,7 +7,7 @@
 
 import { PageHeader } from "@/components/elevo/shared/page-header"
 import { PricingCard } from "@/components/elevo/upgrade/pricing-card"
-import { Sparkles, BookOpen, Headphones, Mic, PenLine } from "lucide-react"
+import { Sparkles, BookOpen, Headphones, Mic, PenLine } from "@/lib/icons"
 
 export default function UpgradePage() {
   return (

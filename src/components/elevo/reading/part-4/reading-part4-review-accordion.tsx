@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { useState, memo, useCallback, useMemo } from "react"
+import { ChevronDown, ChevronUp } from "@/lib/icons"
 import { AnimatePresence, motion } from "framer-motion"
 import type { ReadingPart4QuestionResponse, ReadingPart4QuestionItem } from "@/lib/api/reading"
 
@@ -10,18 +10,30 @@ interface Props {
   questions: ReadingPart4QuestionItem[]
 }
 
-export function ReadingPart4ReviewAccordion({ questionData, questions }: Props) {
+export const ReadingPart4ReviewAccordion = memo(function ReadingPart4ReviewAccordion({ 
+  questionData, 
+  questions 
+}: Props) {
   const [textOpen, setTextOpen] = useState(true)
   const [mcqOpen, setMcqOpen] = useState(false)
   const [tfngOpen, setTfngOpen] = useState(false)
 
   const { text } = questionData
-  const mcqQuestions = questions.filter((q) => q.answers.length === 4)
-  const tfngQuestions = questions.filter((q) => q.answers.length === 3)
+  
+  // Memoized calculations - only recalculate when questions change
+  const mcqQuestions = useMemo(
+    () => questions.filter((q) => q.answers.length === 4),
+    [questions]
+  )
+  const tfngQuestions = useMemo(
+    () => questions.filter((q) => q.answers.length === 3),
+    [questions]
+  )
 
-  const toggleText = () => setTextOpen((prev) => !prev)
-  const toggleMcq = () => setMcqOpen((prev) => !prev)
-  const toggleTfng = () => setTfngOpen((prev) => !prev)
+  // Stable function references - prevent unnecessary re-renders
+  const toggleText = useCallback(() => setTextOpen((prev) => !prev), [])
+  const toggleMcq = useCallback(() => setMcqOpen((prev) => !prev), [])
+  const toggleTfng = useCallback(() => setTfngOpen((prev) => !prev), [])
 
   return (
     <div className="elevo-card overflow-hidden">
@@ -165,4 +177,4 @@ export function ReadingPart4ReviewAccordion({ questionData, questions }: Props) 
       </div>
     </div>
   )
-}
+})

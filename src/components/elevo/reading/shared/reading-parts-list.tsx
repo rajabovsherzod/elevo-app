@@ -1,4 +1,5 @@
-import { AlignLeft, Tag, Heading, ListChecks, FileSearch } from "lucide-react"
+import { memo } from "react"
+import { AlignLeft, Tag, Heading, ListChecks, FileSearch } from "@/lib/icons"
 import { ReadingPartCard } from "./reading-part-card"
 import type { ReadingPart } from "./reading-part-card"
 
@@ -45,7 +46,7 @@ const PARTS: ReadingPart[] = [
   },
 ]
 
-export function ReadingPartsList() {
+export const ReadingPartsList = memo(function ReadingPartsList() {
   return (
     <div className="grid grid-cols-2 gap-3">
       {PARTS.map((part) => (
@@ -53,4 +54,4 @@ export function ReadingPartsList() {
       ))}
     </div>
   )
-}
+})

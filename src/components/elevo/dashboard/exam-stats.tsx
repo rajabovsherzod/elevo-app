@@ -3,8 +3,7 @@
    Solid cards with shadow, no glass.
    ═══════════════════════════════════════ */
 
-import { Headphones, BookOpen, Mic, PenLine } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
+import { Headphones, BookOpen, Mic, PenLine, type LucideIcon } from "@/lib/icons"
 
 interface SkillStatProps {
   icon: LucideIcon

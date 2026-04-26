@@ -7,7 +7,7 @@ export function NavProgress() {
   const pathname = usePathname()
   const ref = useRef<HTMLDivElement>(null)
   const raf = useRef<number>(0)
-  const timer = useRef<ReturnType<typeof setTimeout>>()
+  const timer = useRef<NodeJS.Timeout | undefined>(undefined)
 
   const start = () => {
     const el = ref.current

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import {
   getListeningPart1Questions,
   evaluateListeningPart1,
@@ -50,53 +50,37 @@ function fixAudioUrl(raw: string | null): string {
   }
 }
 
-function groupQuestions(
-  raw: ListeningPart1Question,
-  audioUrl: string
-): ListeningPart1Question[] {
-  if (raw.answers.length <= 3) return [{ ...raw, audio_url: audioUrl }]
-  const map = new Map<number, typeof raw.answers>()
-  raw.answers.forEach(a => {
-    if (!map.has(a.position)) map.set(a.position, [])
-    map.get(a.position)!.push(a)
-  })
-  return Array.from(map.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([position, posAnswers]) => ({
-      id: raw.id * 1000 + position,
-      title: raw.title,
-      instruction: raw.instruction,
-      question: `Question ${position}`,
-      audio_url: audioUrl,
-      answers: posAnswers,
-    }))
-}
-
 export function useListeningPart1() {
-  const [phase, setPhase]           = useState<ListeningPhase>("loading")
-  const [questions, setQuestions]   = useState<ListeningPart1Question[]>([])
-  const [errorMsg, setErrorMsg]     = useState<string | null>(null)
-  const [answers, setAnswers]       = useState<Record<number, number>>({})
-  const [result, setResult]         = useState<ListeningPart1EvaluateResponse | null>(null)
+  const [phase, setPhase] = useState<ListeningPhase>("loading")
+  const [questions, setQuestions] = useState<ListeningPart1Question[]>([])
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [answers, setAnswers] = useState<Record<number, number>>({})
+  const [result, setResult] = useState<ListeningPart1EvaluateResponse | null>(null)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
-  const [retryKey, setRetryKey]     = useState(0)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [retryKey, setRetryKey] = useState(0)
 
-  const audioRef  = useRef<HTMLAudioElement | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
   const examIdRef = useRef<number | null>(null)
 
-  // useCallback([]) — faqat ref va stable setter → mount da bir marta yaratiladi, hech qachon o'zgarmaydi
+  // useCallback([]) — faqat ref va stable setter → hech qachon o'zgarmaydi
   const stopAudio = useCallback(() => {
     const a = audioRef.current
-    if (a) { a.pause(); a.src = ""; audioRef.current = null }
+    if (a) { 
+      a.pause()
+      a.src = ""
+      audioRef.current = null 
+    }
     setIsAudioPlaying(false)
   }, [])
 
-  // useCallback([stopAudio]) — stopAudio [] deps → playAudio ham hech qachon o'zgarmaydi
+  // useCallback([stopAudio]) — stopAudio [] deps → playAudio ham stable
   const playAudio = useCallback((src: string, onEnd?: () => void) => {
     stopAudio()
     const audio = new Audio(src)
     audioRef.current = audio
     setIsAudioPlaying(true)
+    
     let done = false
     const finish = () => {
       if (done) return
@@ -106,16 +90,42 @@ export function useListeningPart1() {
       setIsAudioPlaying(false)
       onEnd?.()
     }
+    
     audio.addEventListener("ended", finish)
     audio.addEventListener("error", finish)
     audio.play().catch(() => finish())
   }, [stopAudio])
 
-  // stopAudio + playAudio deps da — ular [] va [stable] bilan memoized, hech qachon re-run bo'lmaydi
-  // Bu React hooks qoidasiga to'liq mos, eslint-disable kerak emas
+  // Stable function - no deps, no re-creation
+  const groupQuestions = useCallback((
+    raw: ListeningPart1Question,
+    url: string
+  ): ListeningPart1Question[] => {
+    if (raw.answers.length <= 3) return [{ ...raw, audio_url: url }]
+    
+    const map = new Map<number, typeof raw.answers>()
+    raw.answers.forEach(a => {
+      if (!map.has(a.position)) map.set(a.position, [])
+      map.get(a.position)!.push(a)
+    })
+    
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([position, posAnswers]) => ({
+        id: raw.id * 1000 + position,
+        title: raw.title,
+        instruction: raw.instruction,
+        question: `Question ${position}`,
+        audio_url: url,
+        answers: posAnswers,
+      }))
+  }, [])
+
+  // Main effect - only depends on retryKey (stable deps pattern like Part 3)
   useEffect(() => {
     setPhase("loading")
     setQuestions([])
+    setAudioUrl(null)
     setAnswers({})
     setResult(null)
     setErrorMsg(null)
@@ -140,18 +150,25 @@ export function useListeningPart1() {
         clearTimeout(timeout)
 
         const qs = Array.isArray(data.question) ? data.question : [data.question]
-        const audioUrl = fixAudioUrl(qs[0]?.audio_url ?? null)
-        const transformed = qs.flatMap(q => groupQuestions(q, audioUrl))
+        const url = fixAudioUrl(qs[0]?.audio_url ?? null)
+        const transformed = qs.flatMap(q => groupQuestions(q, url))
 
         examIdRef.current = data.exam_id
         setQuestions(transformed)
+        setAudioUrl(url || null)
         setPhase("instruction")
 
+        // Initialize answers
+        const initAnswers: Record<number, number> = {}
+        transformed.forEach(q => { initAnswers[q.id] = 0 })
+        setAnswers(initAnswers)
+
+        // Audio sequence: instruction → question-audio → exam (like Part 3)
         playAudio("/sounds/listening-part1.mp3", () => {
           if (cancelled) return
-          if (audioUrl) {
+          if (url) {
             setPhase("question-audio")
-            playAudio(audioUrl, () => { if (!cancelled) setPhase("exam") })
+            playAudio(url, () => { if (!cancelled) setPhase("exam") })
           } else {
             setPhase("exam")
           }
@@ -169,7 +186,7 @@ export function useListeningPart1() {
       clearTimeout(timeout)
       stopAudio()
     }
-  }, [retryKey, stopAudio, playAudio])
+  }, [retryKey]) // Only retryKey dependency - stable pattern
 
   const retry = useCallback(() => setRetryKey(k => k + 1), [])
 
@@ -180,15 +197,19 @@ export function useListeningPart1() {
   const submit = useCallback(async () => {
     const eid = examIdRef.current
     if (!eid) return
+    
     stopAudio()
     setPhase("submitting")
+    
     try {
       const res = await evaluateListeningPart1({
         exam_id: eid,
-        answers: Object.entries(answers).map(([qid, aid]) => ({
-          question_id: Number(qid),
-          answer_id:   Number(aid),
-        })),
+        answers: Object.entries(answers)
+          .filter(([, aid]) => aid > 0) // Only include answered questions
+          .map(([qid, aid]) => ({
+            question_id: Number(qid),
+            answer_id: Number(aid),
+          })),
       })
       setResult(res)
       setPhase("result")
@@ -198,15 +219,20 @@ export function useListeningPart1() {
     }
   }, [answers, stopAudio])
 
+  const totalAnswered = useMemo(() => 
+    Object.values(answers).filter(aid => aid > 0).length,
+    [answers]
+  )
+
   return {
     phase,
     questions,
-    audioUrl: questions[0]?.audio_url ?? null,
+    audioUrl,
     answers,
     result,
     isAudioPlaying,
     errorMsg,
-    totalAnswered: Object.keys(answers).length,
+    totalAnswered,
     selectAnswer,
     submit,
     retry,

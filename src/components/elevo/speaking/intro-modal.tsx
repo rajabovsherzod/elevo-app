@@ -5,7 +5,7 @@
    ═══════════════════════════════════════ */
 
 import { useEffect, useState } from "react"
-import { ChevronLeft } from "lucide-react"
+import { ChevronLeft } from "@/lib/icons"
 
 interface IntroModalProps {
   part: string

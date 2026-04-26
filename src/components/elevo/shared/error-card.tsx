@@ -1,8 +1,9 @@
 "use client"
 
-import { AlertCircle, RefreshCw, Wifi, WifiOff } from "lucide-react"
+import { AlertCircle, RefreshCw, Wifi, WifiOff } from "@/lib/icons"
 import { Button } from "@/components/base/buttons/button"
 import { ErrorCode, type AppError } from "@/lib/types/errors"
+import { getErrorAriaLabel } from "@/lib/utils/a11y"
 
 interface ErrorCardProps {
   error: AppError
@@ -41,7 +42,12 @@ export function ErrorCard({ error, onRetry, onBack }: ErrorCardProps) {
   }
 
   return (
-    <div className="elevo-card elevo-card-border p-8 flex flex-col items-center text-center gap-5 animate-fade-in">
+    <div 
+      className="elevo-card elevo-card-border p-8 flex flex-col items-center text-center gap-5 animate-fade-in"
+      role="alert"
+      aria-live="assertive"
+      aria-label={getErrorAriaLabel(getTitle())}
+    >
       {/* Icon */}
       <div 
         className="w-20 h-20 rounded-2xl flex items-center justify-center"
@@ -49,6 +55,7 @@ export function ErrorCard({ error, onRetry, onBack }: ErrorCardProps) {
           background: "color-mix(in srgb, var(--el-error) 10%, transparent)",
           border: "1px solid color-mix(in srgb, var(--el-error) 20%, transparent)"
         }}
+        aria-hidden="true"
       >
         {getIcon()}
       </div>
@@ -71,6 +78,7 @@ export function ErrorCard({ error, onRetry, onBack }: ErrorCardProps) {
             color="secondary" 
             onClick={onBack}
             className="w-full sm:w-auto"
+            aria-label="Go back to previous page"
           >
             Orqaga
           </Button>
@@ -81,8 +89,9 @@ export function ErrorCard({ error, onRetry, onBack }: ErrorCardProps) {
             color="primary" 
             onClick={onRetry}
             className="w-full sm:w-auto"
+            aria-label="Retry loading exam"
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
+            <RefreshCw className="w-4 h-4 mr-2" aria-hidden="true" />
             Qayta urinish
           </Button>
         )}

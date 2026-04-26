@@ -1,3 +1,4 @@
+import { memo } from "react"
 import { cx } from "@/utils/cx"
 import type { ListeningPart6EvaluateResponse } from "@/lib/api/listening"
 
@@ -9,7 +10,7 @@ interface GapInputProps {
   result?: ListeningPart6EvaluateResponse | null
 }
 
-function GapInput({ position, value, onChange, disabled, result }: GapInputProps) {
+const GapInput = memo(function GapInput({ position, value, onChange, disabled, result }: GapInputProps) {
   const detail  = result?.details.find(d => d.position === position)
   const checked = !!result && !!detail
   const correct = detail?.correct
@@ -36,11 +37,14 @@ function GapInput({ position, value, onChange, disabled, result }: GapInputProps
         placeholder={String(position)}
         autoComplete="off"
         spellCheck={false}
+        aria-label={`Gap ${position}`}
+        aria-required="true"
+        aria-disabled={disabled}
         className="w-full bg-transparent text-on-surface ring-0 outline-none px-2 py-1 text-xs sm:text-sm text-center placeholder:text-on-surface-variant/40 disabled:cursor-not-allowed"
       />
     </span>
   )
-}
+})
 
 // Parse a single line (no newlines) into text + gap segments
 function parseLineSegments(
@@ -85,7 +89,7 @@ interface Props {
   result?: ListeningPart6EvaluateResponse | null
 }
 
-export function ListeningPart6GapText({ text, positions, answers, onAnswerChange, disabled, result }: Props) {
+export const ListeningPart6GapText = memo(function ListeningPart6GapText({ text, positions, answers, onAnswerChange, disabled, result }: Props) {
   const safeText = text ?? ""
   if (!safeText) return null
 
@@ -109,4 +113,4 @@ export function ListeningPart6GapText({ text, positions, answers, onAnswerChange
       ))}
     </div>
   )
-}
+})

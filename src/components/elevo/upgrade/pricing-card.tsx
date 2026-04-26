@@ -4,7 +4,7 @@
    ═══════════════════════════════════════ */
 
 import Link from "next/link"
-import { Check, type LucideIcon } from "lucide-react"
+import { Check, type LucideIcon } from "@/lib/icons"
 
 export interface PricingCardProps {
   title: string

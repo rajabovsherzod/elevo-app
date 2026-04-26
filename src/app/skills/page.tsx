@@ -4,8 +4,7 @@
 
 import Link from "next/link"
 import { PageHeader } from "@/components/elevo/shared/page-header"
-import { BookOpen, Headphones, Mic, PenLine } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
+import { BookOpen, Headphones, Mic, PenLine, type LucideIcon } from "@/lib/icons"
 
 export default function SkillsPage() {
   return (

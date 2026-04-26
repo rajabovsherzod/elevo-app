@@ -7,7 +7,7 @@
 
 import { useLayoutEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Home, SearchX } from "lucide-react"
+import { ArrowLeft, Home, SearchX } from "@/lib/icons"
 
 export default function NotFound() {
   const router = useRouter()

@@ -7,12 +7,18 @@
 
 import Lottie from "lottie-react"
 import animationData from "../../../../public/loading/exam-loading.json"
+import { getLoadingAriaLabel } from "@/lib/utils/a11y"
 
 export function ExamLoading() {
   return (
-    <div className="elevo-card elevo-card-border w-full min-h-[50vh] flex flex-col items-center justify-center gap-4 p-8">
+    <div 
+      className="elevo-card elevo-card-border w-full min-h-[50vh] flex flex-col items-center justify-center gap-4 p-8"
+      role="status"
+      aria-live="polite"
+      aria-label={getLoadingAriaLabel("exam")}
+    >
       {/* High-quality Lottie animation */}
-      <div className="relative w-40 h-40">
+      <div className="relative w-40 h-40" aria-hidden="true">
         <Lottie
           animationData={animationData}
           loop

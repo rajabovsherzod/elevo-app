@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle2, XCircle, AlertCircle } from "lucide-react"
+import { CheckCircle2, XCircle, AlertCircle } from "@/lib/icons"
 import { useRef, useEffect } from "react"
 import type {
   ReadingPart4EvaluateResponse,

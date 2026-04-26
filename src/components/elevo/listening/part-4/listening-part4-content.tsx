@@ -1,51 +1,19 @@
 "use client"
 
+import { lazy, Suspense } from "react"
 import { Button }             from "@/components/base/buttons/button"
-import { PageHeaderWithBack } from "@/components/elevo/shared/page-header-with-back"
-import { ExamLoading }        from "@/components/elevo/shared/exam-loading"
+
 import { CalculatingResults } from "@/components/elevo/shared"
-import { ListeningAudioBar, ListeningInstruction } from "@/components/elevo/listening/shared"
+import { ListeningAudioBar, ListeningInstruction, ListeningLoading, ListeningError, ListeningProgressBar } from "@/components/elevo/listening/shared"
 import { ListeningPart4PlaceInput } from "./listening-part4-place-input"
-import { ListeningPart4Result }     from "./listening-part4-result"
 import { useListeningPart4 }        from "./use-listening-part4"
 
-// ── Loading ───────────────────────────────────────────────────────────────────
-function LoadingBlock() {
-  return (
-    <div className="flex flex-col pb-6">
-      <PageHeaderWithBack title="Part 4 — Map Matching" />
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <ExamLoading />
-      </div>
-    </div>
-  )
-}
 
-// ── Error ─────────────────────────────────────────────────────────────────────
-function ErrorBlock({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <div className="flex flex-col gap-5 pb-6">
-      <PageHeaderWithBack title="Part 4 — Map Matching" />
-      <div className="elevo-card elevo-card-border p-8 flex flex-col items-center text-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-error/10 flex items-center justify-center">
-          <span className="text-error text-xl">!</span>
-        </div>
-        <div>
-          <p className="text-sm font-bold text-on-surface mb-1">Yuklashda xatolik</p>
-          <p className="text-xs text-on-surface-variant">{message}</p>
-        </div>
-        <div className="flex gap-3">
-          <Button size="sm" color="secondary" onClick={() => window.location.reload()}>
-            Sahifani yangilash
-          </Button>
-          <Button size="sm" color="primary" onClick={onRetry}>
-            Qayta urinish
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
+const ListeningPart4Result = lazy(() =>
+  import("./listening-part4-result").then((mod) => ({
+    default: mod.ListeningPart4Result,
+  }))
+)
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export function ListeningPart4Content() {
@@ -65,11 +33,14 @@ export function ListeningPart4Content() {
     retry,
   } = useListeningPart4()
 
-  if (phase === "loading") return <LoadingBlock />
+  if (phase === "loading") {
+    return <ListeningLoading title="Part 4 — Map Matching" />
+  }
 
   if (phase === "error") {
     return (
-      <ErrorBlock
+      <ListeningError
+        title="Part 4 — Map Matching"
         message={errorMsg ?? "Noma'lum xatolik. Qayta urinib ko'ring."}
         onRetry={retry}
       />
@@ -78,7 +49,7 @@ export function ListeningPart4Content() {
 
   if (phase === "submitting") return (
     <div className="flex flex-col gap-5 pb-6">
-      <PageHeaderWithBack title="Part 4 — Map Matching" />
+
       <CalculatingResults />
     </div>
   )
@@ -86,14 +57,16 @@ export function ListeningPart4Content() {
   if (phase === "result" && result && set) {
     return (
       <div className="flex flex-col gap-5 pb-6">
-        <PageHeaderWithBack title="Part 4 — Results" />
-        <ListeningPart4Result
-          result={result}
-          set={set}
-          audioUrl={audioUrl}
-          imageUrl={imageUrl}
-          userLetters={userLetters}
-        />
+
+        <Suspense fallback={<div className="elevo-card p-8 animate-pulse">Loading results...</div>}>
+          <ListeningPart4Result
+            result={result}
+            set={set}
+            audioUrl={audioUrl}
+            imageUrl={imageUrl}
+            userLetters={userLetters}
+          />
+        </Suspense>
       </div>
     )
   }
@@ -104,7 +77,7 @@ export function ListeningPart4Content() {
 
   return (
     <div className="flex flex-col gap-4 pb-6">
-      <PageHeaderWithBack title="Part 4 — Map Matching" />
+
 
       {/* Instruction */}
       <ListeningInstruction
@@ -153,27 +126,16 @@ export function ListeningPart4Content() {
 
           {/* Progress */}
           {!isLocked && (
-            <div className="elevo-card elevo-card-border px-4 py-3 flex flex-col gap-2">
-              <div className="flex justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
-                  {totalPlaces} places
-                </span>
-                <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
-                  {filledCount} / {totalPlaces}
-                </span>
-              </div>
-              <div className="h-1.5 rounded-full bg-surface-container-high overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-primary transition-all duration-300"
-                  style={{ width: totalPlaces > 0 ? `${(filledCount / totalPlaces) * 100}%` : "0%" }}
-                />
-              </div>
-            </div>
+            <ListeningProgressBar
+              current={filledCount}
+              total={totalPlaces}
+              label="places"
+            />
           )}
 
           {/* Place input cards */}
           <div className="flex flex-col gap-2.5">
-            {set.answers.map((place, i) => (
+            {set.answers.map((place: any, i: number) => (
               <ListeningPart4PlaceInput
                 key={place.id}
                 place={place}
@@ -193,7 +155,7 @@ export function ListeningPart4Content() {
                 Available letters on map
               </p>
               <div className="flex gap-2 flex-wrap">
-                {set.questions.map(q => (
+                {set.questions.map((q: any) => (
                   <span
                     key={q.id}
                     className="w-7 h-7 rounded-md text-xs font-black flex items-center justify-center bg-surface-container border border-outline-variant text-on-surface"

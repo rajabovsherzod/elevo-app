@@ -1,53 +1,24 @@
 "use client"
 
-import { Button }               from "@/components/base/buttons/button"
-import { PageHeaderWithBack }   from "@/components/elevo/shared/page-header-with-back"
-import { ExamLoading }          from "@/components/elevo/shared/exam-loading"
-import { CalculatingResults }   from "@/components/elevo/shared"
-import { ListeningAudioBar, ListeningInstruction } from "@/components/elevo/listening/shared"
-import { ListeningPart1Mcq }    from "./listening-part1-mcq"
-import { ListeningPart1Result } from "./listening-part1-result"
-import { useListeningPart1 }    from "./use-listening-part1"
+import { lazy, Suspense, useMemo } from "react"
+import { Button } from "@/components/base/buttons/button"
+import { CalculatingResults } from "@/components/elevo/shared/calculating-results"
+import { ErrorCard } from "@/components/elevo/shared/error-card"
+import { ExamLoading } from "@/components/elevo/shared/exam-loading"
 
-// ── Loading block ──────────────────────────────────────────────────────────────
-function LoadingBlock() {
-  return (
-    <div className="flex flex-col pb-6">
-      <PageHeaderWithBack title="Part 1 — Short Conversations" />
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <ExamLoading />
-      </div>
-    </div>
-  )
-}
+import { ListeningAudioBar } from "@/components/elevo/listening/shared/listening-audio-bar"
+import { ListeningInstruction } from "@/components/elevo/listening/shared/listening-instruction"
+import { ListeningProgressBar } from "@/components/elevo/listening/shared/listening-progress-bar"
+import { ListeningPart1Mcq } from "./listening-part1-mcq"
+import { useListeningPart1 } from "./use-listening-part1"
+import { ErrorCode } from "@/lib/types/errors"
 
-// ── Error block ────────────────────────────────────────────────────────────────
-function ErrorBlock({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <div className="flex flex-col gap-5 pb-6">
-      <PageHeaderWithBack title="Part 1 — Short Conversations" />
-      <div className="elevo-card elevo-card-border p-8 flex flex-col items-center text-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-error/10 flex items-center justify-center">
-          <span className="text-error text-xl">!</span>
-        </div>
-        <div>
-          <p className="text-sm font-bold text-on-surface mb-1">Yuklashda xatolik</p>
-          <p className="text-xs text-on-surface-variant">{message}</p>
-        </div>
-        <div className="flex gap-3">
-          <Button size="sm" color="secondary" onClick={() => window.location.reload()}>
-            Sahifani yangilash
-          </Button>
-          <Button size="sm" color="primary" onClick={onRetry}>
-            Qayta urinish
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
+const ListeningPart1Result = lazy(() =>
+  import("./listening-part1-result").then((mod) => ({
+    default: mod.ListeningPart1Result,
+  }))
+)
 
-// ── Main component ─────────────────────────────────────────────────────────────
 export function ListeningPart1Content() {
   const {
     phase,
@@ -63,105 +34,112 @@ export function ListeningPart1Content() {
     retry,
   } = useListeningPart1()
 
-  // ── Phase: loading ───────────────────────────────────────────────────────────
-  if (phase === "loading") return <LoadingBlock />
+  // Memoize phase checks to prevent unnecessary re-renders
+  const isLoading = useMemo(() => phase === "loading", [phase])
+  const isError = useMemo(() => phase === "error", [phase])
+  const isSubmitting = useMemo(() => phase === "submitting", [phase])
+  const isResult = useMemo(() => phase === "result", [phase])
+  const isInstruction = useMemo(() => phase === "instruction", [phase])
+  const canAnswer = useMemo(() => phase === "question-audio" || phase === "exam", [phase])
+  const canSubmit = useMemo(() => phase === "exam", [phase])
+  const showAudioBar = useMemo(() => phase === "instruction" || phase === "question-audio", [phase])
 
-  // ── Phase: error ─────────────────────────────────────────────────────────────
-  if (phase === "error") {
+  // Loading state
+  if (isLoading) {
     return (
-      <ErrorBlock
-        message={errorMsg ?? "Noma'lum xatolik. Qayta urinib ko'ring."}
-        onRetry={retry}
-      />
-    )
-  }
-
-  if (phase === "submitting") return (
-    <div className="flex flex-col gap-5 pb-6">
-      <PageHeaderWithBack title="Part 1 — Short Conversations" />
-      <CalculatingResults />
-    </div>
-  )
-
-  // ── Phase: result ────────────────────────────────────────────────────────────
-  if (phase === "result" && result) {
-    return (
-      <div className="flex flex-col gap-5 pb-6">
-        <PageHeaderWithBack title="Part 1 — Results" />
-        <ListeningPart1Result result={result} questions={questions} audioUrl={audioUrl} />
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <ExamLoading />
       </div>
     )
   }
 
-  // ── Phases: instruction / question-audio / exam ──────────────────────────────
-  const instructionOnly = phase === "instruction"
-  const canAnswer       = phase === "question-audio" || phase === "exam"
-  const canSubmit       = phase === "exam"
+  // Error state
+  if (isError) {
+    const appError = {
+      message: errorMsg ?? "Noma'lum xatolik. Qayta urinib ko'ring.",
+      code: ErrorCode.UNKNOWN,
+      retry: true,
+    }
+    
+    return (
+      <ErrorCard
+        error={appError}
+        onRetry={retry}
+        onBack={() => window.history.back()}
+      />
+    )
+  }
 
+  // Submitting state
+  if (isSubmitting) {
+    return <CalculatingResults />
+  }
+
+  // Result state
+  if (isResult && result) {
+    return (
+      <div className="flex flex-col gap-5 animate-fade-in">
+
+        <Suspense fallback={<div className="elevo-card p-8 animate-pulse">Loading results...</div>}>
+          <ListeningPart1Result result={result} questions={questions} audioUrl={audioUrl} />
+        </Suspense>
+      </div>
+    )
+  }
+
+  // Main content - professional structure like reading parts
   return (
-    <div className="flex flex-col gap-4 pb-6">
-      <PageHeaderWithBack title="Part 1 — Short Conversations" />
+    <div className="flex flex-col gap-5 animate-fade-in">
 
-      {/* Static instructions */}
-      <ListeningInstruction text="You will hear some sentences. You will hear each sentence twice. Choose the correct reply to each sentence (A, B or C)." />
+      {/* Instructions card */}
+      <div className="elevo-card elevo-card-border p-5 flex flex-col gap-4">
+        <ListeningInstruction text="You will hear some sentences. You will hear each sentence twice. Choose the correct reply to each sentence (A, B or C)." />
 
-      {/* Audio status — shown while audio is playing */}
-      {(phase === "instruction" || phase === "question-audio") && (
-        <ListeningAudioBar
-          isPlaying={isAudioPlaying}
-          label={phase === "instruction" ? "Instructions" : "Question audio"}
-        />
-      )}
+        {/* Audio status bar */}
+        {showAudioBar && (
+          <ListeningAudioBar
+            isPlaying={isAudioPlaying}
+            label={isInstruction ? "Instructions" : "Question audio"}
+          />
+        )}
 
-      {/* Progress bar — shown during answer phase */}
-      {canAnswer && questions.length > 0 && (
-        <div className="elevo-card elevo-card-border px-4 py-3 flex flex-col gap-2">
-          <div className="flex justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
-              {questions.length} ta savol
-            </span>
-            <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
-              {totalAnswered} / {questions.length}
-            </span>
-          </div>
-          <div className="h-1.5 rounded-full bg-surface-container-high overflow-hidden">
-            <div
-              className="h-full rounded-full bg-primary transition-all duration-300"
-              style={{ width: `${(totalAnswered / questions.length) * 100}%` }}
-            />
-          </div>
-        </div>
-      )}
+        {/* Progress bar during answer phase */}
+        {canAnswer && questions.length > 0 && (
+          <ListeningProgressBar
+            current={totalAnswered}
+            total={questions.length}
+            label="ta savol"
+          />
+        )}
+      </div>
 
-      {/* Question cards */}
+      {/* Questions card */}
       {questions.length > 0 && (
-        <div className="relative">
-          <div className="flex flex-col gap-4">
-            {questions.map((question, index) => (
-              <ListeningPart1Mcq
-                key={question.id}
-                question={question}
-                questionNumber={index + 1}
-                selectedAnswerId={answers[question.id]}
-                onSelect={selectAnswer}
-                isLocked={instructionOnly}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+        <div className="elevo-card elevo-card-border p-5 flex flex-col gap-4">
+          {questions.map((question, index) => (
+            <ListeningPart1Mcq
+              key={question.id}
+              question={question}
+              questionNumber={index + 1}
+              selectedAnswerId={answers[question.id]}
+              onSelect={selectAnswer}
+              isLocked={isInstruction}
+            />
+          ))}
 
-      {/* Submit button */}
-      {canSubmit && questions.length > 0 && (
-        <div className="flex justify-end pt-2">
-          <Button
-            size="md"
-            color="primary"
-            isDisabled={totalAnswered < questions.length}
-            onClick={submit}
-          >
-            Submit
-          </Button>
+          {/* Submit button */}
+          {canSubmit && (
+            <div className="flex justify-end pt-2">
+              <Button
+                size="md"
+                color="primary"
+                isDisabled={totalAnswered < questions.length}
+                onClick={submit}
+              >
+                Submit Answers
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

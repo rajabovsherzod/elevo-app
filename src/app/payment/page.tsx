@@ -7,7 +7,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation"
 import { useState, Suspense } from "react"
-import { Copy, Check, Send, CreditCard as CreditCardIcon, Info, CheckCircle2 } from "lucide-react"
+import { Copy, Check, Send, CreditCard as CreditCardIcon, Info, CheckCircle2 } from "@/lib/icons"
 import { CreditCard } from "@/components/shared-assets/credit-card/credit-card"
 import { getPlanById } from "@/lib/payment/plans"
 import { PageHeaderWithBack } from "@/components/elevo/shared/page-header-with-back"

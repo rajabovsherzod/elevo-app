@@ -4,8 +4,7 @@
    Stat pills: white/dark solid, no glass.
    ═══════════════════════════════════════ */
 
-import { Crown, Flame, Zap, Sparkles } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
+import { Crown, Flame, Zap, Sparkles, type LucideIcon } from "@/lib/icons"
 
 interface StatPill {
   icon: LucideIcon

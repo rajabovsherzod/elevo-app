@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import {
   getListeningPart2Questions,
   evaluateListeningPart2,
@@ -165,6 +165,7 @@ export function useListeningPart2() {
     stopAudio()
     setPhase("submitting")
     try {
+      // Read latest answers to avoid dependency on answers state
       const res = await evaluateListeningPart2({
         exam_id: eid,
         answers: (question.positions ?? []).map(pos => ({
@@ -181,9 +182,19 @@ export function useListeningPart2() {
     }
   }, [answers, question, stopAudio])
 
-  const allFilled = question
-    ? (question.positions ?? []).every(p => (answers[p] ?? "").trim().length > 0)
-    : false
+  const allFilled = useMemo(() =>
+    question
+      ? (question.positions ?? []).every(p => (answers[p] ?? "").trim().length > 0)
+      : false,
+    [question, answers]
+  )
+
+  const filledCount = useMemo(() =>
+    question
+      ? question.positions.filter(p => (answers[p] ?? "").trim().length > 0).length
+      : 0,
+    [question, answers]
+  )
 
   return {
     phase,
@@ -194,6 +205,7 @@ export function useListeningPart2() {
     isAudioPlaying,
     errorMsg,
     allFilled,
+    filledCount,
     setAnswer,
     submit,
     retry,

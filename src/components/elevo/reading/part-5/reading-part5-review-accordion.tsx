@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { useState, memo, useCallback, useMemo } from "react"
+import { ChevronDown, ChevronUp } from "@/lib/icons"
 import { AnimatePresence, motion } from "framer-motion"
 import type { ReadingPart5QuestionResponse } from "@/lib/api/reading-part5"
 
@@ -9,16 +9,36 @@ interface Props {
   questionData: ReadingPart5QuestionResponse
 }
 
-export function ReadingPart5ReviewAccordion({ questionData }: Props) {
+export const ReadingPart5ReviewAccordion = memo(function ReadingPart5ReviewAccordion({ 
+  questionData 
+}: Props) {
   const [textOpen, setTextOpen] = useState(true)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [mcqOpen, setMcqOpen] = useState(false)
 
   const { text } = questionData
 
-  const toggleText = () => setTextOpen((prev) => !prev)
-  const toggleSummary = () => setSummaryOpen((prev) => !prev)
-  const toggleMcq = () => setMcqOpen((prev) => !prev)
+  // Memoized text processing - only recalculate when summary_text changes
+  const processedSummaryText = useMemo(
+    () => text?.summary_text?.replace(/_{1,}(\d+)_{1,}/g, "__________") || "",
+    [text?.summary_text]
+  )
+
+  // Memoized gap filling positions - only recalculate when gap_fillings change
+  const gapFillingPositions = useMemo(
+    () => text?.gap_fillings?.flatMap((gf: any) => 
+      gf.positions.map((pos: number) => ({
+        position: pos,
+        answer: gf.answers?.find((a: any) => a.position === pos)?.answer || ""
+      }))
+    ) || [],
+    [text?.gap_fillings]
+  )
+
+  // Stable function references - prevent unnecessary re-renders
+  const toggleText = useCallback(() => setTextOpen((prev) => !prev), [])
+  const toggleSummary = useCallback(() => setSummaryOpen((prev) => !prev), [])
+  const toggleMcq = useCallback(() => setMcqOpen((prev) => !prev), [])
 
   return (
     <div className="elevo-card overflow-hidden">
@@ -97,17 +117,15 @@ export function ReadingPart5ReviewAccordion({ questionData }: Props) {
               >
                 <div className="px-4 pb-4">
                   <div className="text-sm text-on-surface leading-relaxed whitespace-pre-wrap">
-                    {text.summary_text.replace(/_{1,}(\d+)_{1,}/g, "__________")}
+                    {processedSummaryText}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {text.gap_fillings.flatMap((gf: any) => 
-                      gf.positions.map((pos: number) => (
-                        <div key={pos} className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10">
-                          <span className="text-xs font-bold text-primary">{pos}.</span>
-                          <span className="text-xs font-semibold text-on-surface">{gf.answers?.find((a: any) => a.position === pos)?.answer || ""}</span>
-                        </div>
-                      ))
-                    )}
+                    {gapFillingPositions.map(({ position, answer }) => (
+                      <div key={position} className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10">
+                        <span className="text-xs font-bold text-primary">{position}.</span>
+                        <span className="text-xs font-semibold text-on-surface">{answer}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </motion.div>
@@ -123,7 +141,7 @@ export function ReadingPart5ReviewAccordion({ questionData }: Props) {
             className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container/50 transition-colors"
           >
             <span className="text-sm font-bold text-on-surface">
-              Multiple Choice Questions ({text.mcq_questions.length})
+              Multiple Choice Questions ({text?.mcq_questions?.length || 0})
             </span>
             {mcqOpen ? (
               <ChevronUp className="w-5 h-5 text-on-surface-variant" />
@@ -142,7 +160,7 @@ export function ReadingPart5ReviewAccordion({ questionData }: Props) {
                 className="overflow-hidden"
               >
                 <div className="px-4 pb-4 flex flex-col gap-4">
-                  {text.mcq_questions.map((q, qi) => (
+                  {text?.mcq_questions?.map((q, qi) => (
                     <div key={q.id} className="flex flex-col gap-2">
                       <p className="text-sm font-semibold text-on-surface">
                         <span className="text-primary font-black">{qi + 5}.</span> {q.question}
@@ -170,4 +188,4 @@ export function ReadingPart5ReviewAccordion({ questionData }: Props) {
       </div>
     </div>
   )
-}
+})

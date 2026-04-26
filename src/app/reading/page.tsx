@@ -1,6 +1,6 @@
 "use client"
 
-import { BookOpen } from "lucide-react"
+import { BookOpen } from "@/lib/icons"
 import { PageHeader } from "@/components/elevo/shared/page-header"
 import { FullMockCard } from "@/components/elevo/reading/shared/full-mock-card"
 import { ReadingPartsList } from "@/components/elevo/reading/shared/reading-parts-list"

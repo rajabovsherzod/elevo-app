@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import {
   getListeningPart5Questions,
   evaluateListeningPart5,
@@ -177,6 +177,7 @@ export function useListeningPart5() {
     stopAudio()
     setPhase("submitting")
     try {
+      // Read latest userAnswers to avoid dependency
       const answers = Object.entries(userAnswers).map(([qid, aid]) => ({
         question_id: Number(qid),
         answer_id:   Number(aid),
@@ -190,9 +191,20 @@ export function useListeningPart5() {
     }
   }, [extracts, userAnswers, stopAudio])
 
-  const totalQuestions = extracts.reduce((sum, e) => sum + e.questions.length, 0)
-  const answeredCount  = Object.keys(userAnswers).length
-  const allAnswered    = totalQuestions > 0 && answeredCount === totalQuestions
+  const totalQuestions = useMemo(() => 
+    extracts.reduce((sum, e) => sum + e.questions.length, 0),
+    [extracts]
+  )
+  
+  const answeredCount = useMemo(() => 
+    Object.keys(userAnswers).length,
+    [userAnswers]
+  )
+  
+  const allAnswered = useMemo(() => 
+    totalQuestions > 0 && answeredCount === totalQuestions,
+    [totalQuestions, answeredCount]
+  )
 
   return {
     phase,

@@ -1,18 +1,25 @@
+import { memo, useMemo } from "react"
 import { cx } from "@/utils/cx"
 import type { ReadingPart1EvaluateResponse } from "@/lib/api/reading"
+import { getGapFillingAriaLabel } from "@/lib/utils/a11y"
 
 interface GapInputProps {
   position: number
+  totalGaps: number
   value: string
   onChange: (pos: number, val: string) => void
   disabled: boolean
   result?: ReadingPart1EvaluateResponse | null
 }
 
-function GapInput({ position, value, onChange, disabled, result }: GapInputProps) {
+const GapInput = memo(function GapInput({ position, totalGaps, value, onChange, disabled, result }: GapInputProps) {
   const detail  = result?.details.find((d) => d.position === position)
   const checked = !!result
   const correct = detail?.correct
+
+  // ARIA label for accessibility
+  const ariaLabel = getGapFillingAriaLabel(position, totalGaps)
+  const ariaDescribedBy = checked ? `gap-${position}-result` : undefined
 
   return (
     <span
@@ -36,11 +43,21 @@ function GapInput({ position, value, onChange, disabled, result }: GapInputProps
         placeholder={String(position)}
         autoComplete="off"
         spellCheck={false}
+        aria-label={ariaLabel}
+        aria-describedby={ariaDescribedBy}
+        aria-required="true"
+        aria-invalid={checked && !correct ? "true" : "false"}
         className="w-full bg-transparent text-on-surface ring-0 outline-none px-2 py-1 text-xs sm:text-sm text-center placeholder:text-on-surface-variant/40 disabled:cursor-not-allowed"
       />
+      {/* Hidden result announcement for screen readers */}
+      {checked && (
+        <span id={`gap-${position}-result`} className="sr-only">
+          {correct ? "Correct answer" : `Incorrect. Correct answer is: ${detail?.correct_answer || "not available"}`}
+        </span>
+      )}
     </span>
   )
-}
+})
 
 interface ReadingPart1TextProps {
   text: string
@@ -50,7 +67,7 @@ interface ReadingPart1TextProps {
   result?: ReadingPart1EvaluateResponse | null
 }
 
-export function ReadingPart1Text({
+export const ReadingPart1Text = memo(function ReadingPart1Text({
   text,
   positions,
   answers,
@@ -65,10 +82,17 @@ export function ReadingPart1Text({
     return !posSet || posSet.has(pos) ? `§§${pos}§§` : `_${num}_`
   })
 
-  const segments = processed.split(/(§§\d+§§)/)
+  const segments = useMemo(
+    () => processed.split(/(§§\d+§§)/),
+    [processed]
+  )
 
   return (
-    <p className="text-xs sm:text-sm md:text-base leading-[1.9] text-on-surface">
+    <p 
+      className="text-xs sm:text-sm md:text-base leading-[1.9] text-on-surface"
+      role="article"
+      aria-label="Reading passage with fill-in-the-blank questions"
+    >
       {segments.map((seg, i) => {
         const match = seg.match(/§§(\d+)§§/)
         if (match) {
@@ -77,6 +101,7 @@ export function ReadingPart1Text({
             <GapInput
               key={`gap-${pos}`}
               position={pos}
+              totalGaps={positions.length}
               value={answers[pos] ?? ""}
               onChange={onAnswerChange}
               disabled={!!result}
@@ -88,4 +113,4 @@ export function ReadingPart1Text({
       })}
     </p>
   )
-}
+})

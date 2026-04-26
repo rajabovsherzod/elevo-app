@@ -68,6 +68,10 @@ export function useReadingPart1() {
 
   // Load question on mount
   useEffect(() => {
+    // Clear previous data to prevent flickering
+    setQuestionData(null)
+    setAnswers({})
+    
     loader.load()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -89,7 +93,7 @@ export function useReadingPart1() {
     }))
 
     await submitter.submit({ exam_id: qd.exam_id, answers: answersArray })
-  }, [submitter])
+  }, [submitter.submit])
 
   // Check if all filled
   const allFilled = Object.values(answers).every((a) => a.trim().length > 0)

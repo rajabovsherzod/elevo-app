@@ -5,8 +5,7 @@
 
 import Link from "next/link"
 import { PageHeader } from "@/components/elevo/shared/page-header"
-import { Mic, Play, Clock, MessageSquare, Users, Lightbulb } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
+import { Mic, Play, Clock, MessageSquare, Users, Lightbulb, type LucideIcon } from "@/lib/icons"
 
 export default function SpeakingPage() {
   return (

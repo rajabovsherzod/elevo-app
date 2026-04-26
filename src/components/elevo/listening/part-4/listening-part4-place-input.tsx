@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef } from "react"
+import { useRef, memo } from "react"
 import { cx } from "@/utils/cx"
 import type { ListeningPart4PlaceOption, ListeningPart4FieldItem } from "@/lib/api/listening"
 
@@ -13,7 +13,7 @@ interface Props {
   isLocked: boolean
 }
 
-export function ListeningPart4PlaceInput({ place, placeIndex, fields, letter, onChange, isLocked }: Props) {
+export const ListeningPart4PlaceInput = memo(function ListeningPart4PlaceInput({ place, placeIndex, fields, letter, onChange, isLocked }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const isValid = !!letter && fields.some(f => f.text.toUpperCase() === letter.toUpperCase())
@@ -61,6 +61,9 @@ export function ListeningPart4PlaceInput({ place, placeIndex, fields, letter, on
           value={letter}
           onChange={handleChange}
           disabled={isLocked}
+          aria-label={`Place ${placeIndex + 1}: ${place.text}. Enter matching letter`}
+          aria-required="true"
+          aria-disabled={isLocked}
           className="absolute inset-0 w-full h-full text-center text-lg font-black text-on-surface bg-transparent border-none outline-none uppercase caret-transparent"
           style={{ letterSpacing: 0 }}
         />
@@ -70,4 +73,4 @@ export function ListeningPart4PlaceInput({ place, placeIndex, fields, letter, on
       </div>
     </div>
   )
-}
+})

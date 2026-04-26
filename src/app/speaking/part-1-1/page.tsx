@@ -13,7 +13,7 @@ import { QuestionScreen } from "@/components/elevo/speaking/question-screen"
 import { SpeakingAnalysis } from "@/components/elevo/speaking/speaking-analysis"
 import { speakingService } from "@/services/speaking.service"
 import type { SpeakingEvaluateResponseSchema, SpeakingPart1_1ResponseSchema } from "@/schemas/speaking.schema"
-import { Loader2 } from "lucide-react"
+import { Loader2 } from "@/lib/icons"
 
 type Stage = "loading" | "ready" | "intro" | "question" | "evaluating" | "analysis"
 

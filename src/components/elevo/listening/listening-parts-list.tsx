@@ -1,4 +1,5 @@
-import { Mic2, Radio, Users, MapPin, Layers, FileText } from "lucide-react"
+import { memo } from "react"
+import { Mic2, Radio, Users, MapPin, Layers, FileText } from "@/lib/icons"
 import { ListeningPartCard } from "./listening-part-card"
 import type { ListeningPart } from "./listening-part-card"
 
@@ -53,7 +54,7 @@ const PARTS: ListeningPart[] = [
   },
 ]
 
-export function ListeningPartsList() {
+export const ListeningPartsList = memo(function ListeningPartsList() {
   return (
     <div className="grid grid-cols-2 gap-3">
       {PARTS.map((part) => (
@@ -61,4 +62,4 @@ export function ListeningPartsList() {
       ))}
     </div>
   )
-}
+})

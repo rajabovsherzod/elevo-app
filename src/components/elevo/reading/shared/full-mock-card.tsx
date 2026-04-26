@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ClipboardList, ChevronRight } from "lucide-react"
+import { ClipboardList, ChevronRight } from "@/lib/icons"
 
 export function FullMockCard() {
   return (

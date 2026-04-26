@@ -3,8 +3,19 @@ import { cx } from "@/utils/cx"
 
 const LABELS = ["A", "B", "C"]
 
+interface ListeningPart5Answer {
+  id: number
+  answer: string
+}
+
+interface ListeningPart5Question {
+  id: number
+  question: string
+  answers: ListeningPart5Answer[]
+}
+
 interface ListeningPart5McqProps {
-  question: any
+  question: ListeningPart5Question
   questionNumber: number
   selectedAnswerId: number | undefined
   onSelect?: (questionId: number, answerId: number) => void
@@ -41,8 +52,8 @@ export const ListeningPart5Mcq = memo(function ListeningPart5Mcq({
       </div>
 
       {/* Options */}
-      <div className="flex flex-col gap-2 p-4">
-        {question.answers.map((answer: any, i: number) => {
+      <div className="flex flex-col gap-2 p-4" role="radiogroup" aria-label={`Question ${questionNumber} options`}>
+        {question.answers.map((answer, i) => {
           const label = LABELS[i] ?? String(i + 1)
           const isSelected = selectedAnswerId === answer.id
           const isTooltipShowing = tooltipVisible === answer.id
@@ -51,6 +62,10 @@ export const ListeningPart5Mcq = memo(function ListeningPart5Mcq({
             <div key={answer.id} className="relative">
               <button
                 type="button"
+                role="radio"
+                aria-checked={isSelected}
+                aria-label={`Question ${questionNumber}, Option ${label}: ${answer.answer}`}
+                aria-disabled={isLocked}
                 onClick={() => {
                   if (isLocked) {
                     showTooltip(answer.id)

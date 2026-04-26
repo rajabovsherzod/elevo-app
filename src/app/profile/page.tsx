@@ -1,6 +1,6 @@
 "use client";
 
-import { Sun, Moon, Monitor, User, Bell, HelpCircle, LogOut, ChevronRight, Shield, Loader2 } from "lucide-react";
+import { Sun, Moon, Monitor, User, Bell, HelpCircle, LogOut, ChevronRight, Shield, Loader2 } from "@/lib/icons";
 import Image from "next/image";
 import { useTheme } from "@/providers/theme";
 import { useEffect, useState } from "react";
@@ -65,9 +65,8 @@ function MenuRow({
 
 /* ── Theme Switcher ──────────────────────────────────────────── */
 const THEMES = [
-  { key: "light",  label: "Kunduzgi", icon: Sun   },
-  { key: "dark",   label: "Tungi",    icon: Moon  },
-  { key: "system", label: "Tizim",    icon: Monitor },
+  { key: "light" as const, label: "Kunduzgi", icon: Sun   },
+  { key: "dark" as const,  label: "Tungi",    icon: Moon  },
 ] as const;
 
 function ThemeSwitcher() {

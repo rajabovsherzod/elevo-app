@@ -1,51 +1,19 @@
 "use client"
 
+import { lazy, Suspense } from "react"
 import { Button }             from "@/components/base/buttons/button"
-import { PageHeaderWithBack } from "@/components/elevo/shared/page-header-with-back"
-import { ExamLoading }        from "@/components/elevo/shared/exam-loading"
+
 import { CalculatingResults } from "@/components/elevo/shared"
-import { ListeningAudioBar, ListeningInstruction } from "@/components/elevo/listening/shared"
+import { ListeningAudioBar, ListeningInstruction, ListeningLoading, ListeningError, ListeningProgressBar } from "@/components/elevo/listening/shared"
 import { ListeningPart5Mcq }         from "./listening-part5-mcq"
-import { ListeningPart5Result }      from "./listening-part5-result"
 import { useListeningPart5 }         from "./use-listening-part5"
 
-// ── Loading ───────────────────────────────────────────────────────────────────
-function LoadingBlock() {
-  return (
-    <div className="flex flex-col pb-6">
-      <PageHeaderWithBack title="Part 5 — Multiple Choice" />
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <ExamLoading />
-      </div>
-    </div>
-  )
-}
 
-// ── Error ─────────────────────────────────────────────────────────────────────
-function ErrorBlock({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <div className="flex flex-col gap-5 pb-6">
-      <PageHeaderWithBack title="Part 5 — Multiple Choice" />
-      <div className="elevo-card elevo-card-border p-8 flex flex-col items-center text-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-error/10 flex items-center justify-center">
-          <span className="text-error text-xl">!</span>
-        </div>
-        <div>
-          <p className="text-sm font-bold text-on-surface mb-1">Yuklashda xatolik</p>
-          <p className="text-xs text-on-surface-variant">{message}</p>
-        </div>
-        <div className="flex gap-3">
-          <Button size="sm" color="secondary" onClick={() => window.location.reload()}>
-            Sahifani yangilash
-          </Button>
-          <Button size="sm" color="primary" onClick={onRetry}>
-            Qayta urinish
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
+const ListeningPart5Result = lazy(() =>
+  import("./listening-part5-result").then((mod) => ({
+    default: mod.ListeningPart5Result,
+  }))
+)
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export function ListeningPart5Content() {
@@ -65,11 +33,14 @@ export function ListeningPart5Content() {
     retry,
   } = useListeningPart5()
 
-  if (phase === "loading") return <LoadingBlock />
+  if (phase === "loading") {
+    return <ListeningLoading title="Part 5 — Multiple Choice" />
+  }
 
   if (phase === "error") {
     return (
-      <ErrorBlock
+      <ListeningError
+        title="Part 5 — Multiple Choice"
         message={errorMsg ?? "Noma'lum xatolik. Qayta urinib ko'ring."}
         onRetry={retry}
       />
@@ -78,7 +49,7 @@ export function ListeningPart5Content() {
 
   if (phase === "submitting") return (
     <div className="flex flex-col gap-5 pb-6">
-      <PageHeaderWithBack title="Part 5 — Multiple Choice" />
+
       <CalculatingResults />
     </div>
   )
@@ -86,13 +57,15 @@ export function ListeningPart5Content() {
   if (phase === "result" && result) {
     return (
       <div className="flex flex-col gap-5 pb-6">
-        <PageHeaderWithBack title="Part 5 — Results" />
-        <ListeningPart5Result
-          result={result}
-          extracts={extracts}
-          audioUrls={audioUrls}
-          userAnswers={userAnswers}
-        />
+
+        <Suspense fallback={<div className="elevo-card p-8 animate-pulse">Loading results...</div>}>
+          <ListeningPart5Result
+            result={result}
+            extracts={extracts}
+            audioUrls={audioUrls}
+            userAnswers={userAnswers}
+          />
+        </Suspense>
       </div>
     )
   }
@@ -102,7 +75,7 @@ export function ListeningPart5Content() {
 
   return (
     <div className="flex flex-col gap-4 pb-6">
-      <PageHeaderWithBack title="Part 5 — Multiple Choice" />
+
 
       {/* Instruction */}
       <ListeningInstruction
@@ -126,22 +99,11 @@ export function ListeningPart5Content() {
 
       {/* Progress - only during exam phase when user can answer */}
       {!isLocked && totalQuestions > 0 && (
-        <div className="elevo-card elevo-card-border px-4 py-3 flex flex-col gap-2">
-          <div className="flex justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
-              {totalQuestions} questions
-            </span>
-            <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
-              {answeredCount} / {totalQuestions}
-            </span>
-          </div>
-          <div className="h-1.5 rounded-full bg-surface-container-high overflow-hidden">
-            <div
-              className="h-full rounded-full bg-primary transition-all duration-300"
-              style={{ width: `${(answeredCount / totalQuestions) * 100}%` }}
-            />
-          </div>
-        </div>
+        <ListeningProgressBar
+          current={answeredCount}
+          total={totalQuestions}
+          label="questions"
+        />
       )}
 
       {/* Extract cards with questions - visible from instruction phase onward, locked until exam */}

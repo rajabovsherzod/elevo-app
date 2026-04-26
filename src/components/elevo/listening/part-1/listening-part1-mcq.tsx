@@ -42,7 +42,7 @@ export const ListeningPart1Mcq = memo(function ListeningPart1Mcq({
       </div>
 
       {/* Options */}
-      <div className="flex flex-col gap-2 p-4">
+      <div className="flex flex-col gap-2 p-4" role="radiogroup" aria-label={`Question ${questionNumber} options`}>
         {question.answers.map((answer, i) => {
           const label = LABELS[i] ?? String(i + 1)
           const isSelected = selectedAnswerId === answer.id
@@ -52,6 +52,10 @@ export const ListeningPart1Mcq = memo(function ListeningPart1Mcq({
             <div key={answer.id} className="relative">
               <button
                 type="button"
+                role="radio"
+                aria-checked={isSelected}
+                aria-label={`Question ${questionNumber}, Option ${label}: ${answer.answer}`}
+                aria-disabled={isLocked}
                 onClick={() => {
                   if (isLocked) {
                     showTooltip(answer.id)

@@ -1,11 +1,17 @@
- /** @type {import('next').NextConfig} */
+import bundleAnalyzer from '@next/bundle-analyzer';
+
+const withBundleAnalyzer = bundleAnalyzer({
+    enabled: process.env.ANALYZE === 'true',
+});
+
+/** @type {import('next').NextConfig} */
 const nextConfig = {
     cacheComponents: true,
     experimental: {
-        optimizePackageImports: ["@untitledui/icons"],
+        optimizePackageImports: ["@untitledui/icons", "lucide-react"],
         viewTransition: true,
     },
     allowedDevOrigins: ['*.trycloudflare.com'],
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

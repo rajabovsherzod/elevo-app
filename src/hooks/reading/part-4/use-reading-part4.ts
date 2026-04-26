@@ -73,7 +73,7 @@ export function useReadingPart4() {
     }))
 
     await submitter.submit({ exam_id: qd.exam_id, answers: answersArray })
-  }, [submitter])
+  }, [submitter.submit])
 
   const questions = questionData?.text.questions ?? []
   const allAnswered = questions.length > 0 && questions.every((q) => answers[q.id] !== undefined)

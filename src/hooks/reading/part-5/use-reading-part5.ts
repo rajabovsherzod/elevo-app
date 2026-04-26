@@ -105,7 +105,7 @@ export function useReadingPart5() {
       gap_answers: gapAnswersArray,
       question_answers: mcqAnswersArray,
     })
-  }, [submitter])
+  }, [submitter.submit])
 
   const gapFillingsRaw = questionData?.text.gap_fillings ?? []
   const mcqQuestions = questionData?.text.mcq_questions ?? []

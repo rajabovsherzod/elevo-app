@@ -1,7 +1,9 @@
 "use client"
 
 import { useRef, memo } from "react"
-import { Plyr } from "plyr-react"
+import dynamic from "next/dynamic"
+
+const Plyr = dynamic(() => import("plyr-react").then((mod) => mod.Plyr), { ssr: false })
 import "plyr-react/plyr.css"
 import "./listening-audio-player.css"
 

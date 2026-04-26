@@ -1,3 +1,4 @@
+import { memo } from "react"
 import { cx } from "@/utils/cx"
 import type { ReadingPart5MCQQuestion } from "@/lib/api/reading-part5"
 
@@ -9,7 +10,7 @@ interface ReadingPart5MCQQuestionsProps {
   startNumber: number  // MCQ starts from 5
 }
 
-export function ReadingPart5MCQQuestions({
+export const ReadingPart5MCQQuestions = memo(function ReadingPart5MCQQuestions({
   questions,
   answers,
   onSelect,
@@ -82,4 +83,4 @@ export function ReadingPart5MCQQuestions({
       </div>
     </div>
   )
-}
+})

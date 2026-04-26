@@ -1,3 +1,4 @@
+import { memo } from "react"
 import { cx } from "@/utils/cx"
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -11,7 +12,7 @@ interface ReadingPart3ParagraphsProps {
   disabled: boolean
 }
 
-export function ReadingPart3Paragraphs({
+export const ReadingPart3Paragraphs = memo(function ReadingPart3Paragraphs({
   paragraphs,
   headings,
   matches,
@@ -76,4 +77,4 @@ export function ReadingPart3Paragraphs({
       </div>
     </div>
   )
-}
+})

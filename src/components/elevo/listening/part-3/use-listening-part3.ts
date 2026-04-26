@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import {
   getListeningPart3Questions,
   evaluateListeningPart3,
@@ -175,8 +175,15 @@ export function useListeningPart3() {
     }
   }, [set, matches, stopAudio])
 
-  const speakers = set?.questions.filter(q => q.text !== "Main") ?? []
-  const allMatched = speakers.length > 0 && speakers.every(q => matches[q.id] !== undefined)
+  const speakers = useMemo(() => 
+    set?.questions.filter(q => q.text !== "Main") ?? [],
+    [set]
+  )
+  
+  const allMatched = useMemo(() => 
+    speakers.length > 0 && speakers.every(q => matches[q.id] !== undefined),
+    [speakers, matches]
+  )
 
   return {
     phase,

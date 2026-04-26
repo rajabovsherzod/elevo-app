@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle2, XCircle, AlertCircle } from "lucide-react"
+import { CheckCircle2, XCircle, AlertCircle } from "@/lib/icons"
 import { useRef, useEffect } from "react"
 import type {
   ReadingPart5EvaluateResponse,
@@ -28,8 +28,8 @@ export function ReadingPart5Result({ result, questionData }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const totalGap = questionData.text.gap_fillings.length
-  const totalMcq = questionData.text.mcq_questions.length
+  const totalGap = questionData.text.gap_fillings?.length ?? 0
+  const totalMcq = questionData.text.mcq_questions?.length ?? 0
   const correctGap = result.details.gap_filling.filter(d => d.correct).length
   const correctMcq = result.details.questions.filter(d => d.correct).length
 
@@ -144,7 +144,7 @@ export function ReadingPart5Result({ result, questionData }: Props) {
 
         <div className="flex flex-col gap-2 p-3">
           {result.details.questions.map((d) => {
-            const question = questionData.text.mcq_questions.find(q => q.id === d.question_id)
+            const question = questionData.text.mcq_questions?.find(q => q.id === d.question_id)
             const userAnswerObj = question?.answers.find(a => a.id === d.answer_id)
             const correctAnswerObj = question?.answers.find(a => a.answer === d.correct_answer)
             
@@ -158,7 +158,7 @@ export function ReadingPart5Result({ result, questionData }: Props) {
                 className="flex items-start gap-3 px-4 py-3.5 rounded-xl transition-all duration-200"
               >
                 <span className="w-7 h-7 rounded-lg text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 bg-indigo-500 text-white shadow-sm">
-                  {question ? questionData.text.gap_fillings.length + questionData.text.mcq_questions.indexOf(question) + 1 : "?"}
+                  {question ? (questionData.text.gap_fillings?.length ?? 0) + (questionData.text.mcq_questions?.indexOf(question) ?? 0) + 1 : "?"}
                 </span>
 
                 <div className="flex-1 min-w-0">

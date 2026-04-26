@@ -1,103 +1,113 @@
 "use client"
 
-import { Button }                  from "@/components/base/buttons/button"
-import { PageHeaderWithBack }      from "@/components/elevo/shared/page-header-with-back"
-import { ExamLoading }             from "@/components/elevo/shared/exam-loading"
-import { CalculatingResults }      from "@/components/elevo/shared"
-import { ErrorCard }               from "@/components/elevo/shared/error-card"
-import { ExamTimer }               from "@/components/elevo/shared/exam-timer"
-import { useReadingPart1 }         from "@/hooks/reading/part-1/use-reading-part1"
-import { ReadingPart1Text }        from "./reading-part1-text"
-import { ReadingPart1Result }      from "./reading-part1-result"
+import { lazy, Suspense, useMemo } from "react"
+import { Button } from "@/components/base/buttons/button"
+import { ExamLoading } from "@/components/elevo/shared/exam-loading"
+import { ExamTimer } from "@/components/elevo/shared/exam-timer"
+import { CalculatingResults } from "@/components/elevo/shared/calculating-results"
+import { ErrorCard } from "@/components/elevo/shared/error-card"
+import { useReadingPart1 } from "@/hooks/reading/part-1/use-reading-part1"
+import { ReadingPart1Text } from "./reading-part1-text"
+
+const ReadingPart1Result = lazy(() =>
+  import("./reading-part1-result").then((mod) => ({
+    default: mod.ReadingPart1Result,
+  }))
+)
+
+const ReadingPart1ReviewAccordion = lazy(() =>
+  import("./reading-part1-review-accordion").then((mod) => ({
+    default: mod.ReadingPart1ReviewAccordion,
+  }))
+)
 
 export function ReadingPart1Content() {
   const {
-    loading, submitting, questionData,
-    answers, result, timeLeft, error,
-    allFilled, formatTime,
-    handleAnswerChange, handleSubmit, retry,
+    loading,
+    submitting,
+    questionData,
+    answers,
+    result,
+    timeLeft,
+    error,
+    allFilled,
+    formatTime,
+    handleAnswerChange,
+    handleSubmit,
+    retry,
   } = useReadingPart1()
 
-  if (loading) {
-    return (
-      <div className="flex flex-col gap-5 pb-6">
-        <PageHeaderWithBack
-          title="Part 1.1 — Gap Filling"
-          rightContent={undefined}
-        />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <ExamLoading />
-        </div>
-      </div>
-    )
-  }
+  const { question } = questionData || {}
 
-  if (error) {
-    return (
-      <div className="flex flex-col gap-5 pb-6">
-        <PageHeaderWithBack
-          title="Part 1.1 — Gap Filling"
-          rightContent={undefined}
-        />
-        <ErrorCard 
-          error={error} 
-          onRetry={retry}
-          onBack={() => window.history.back()}
-        />
-      </div>
-    )
-  }
-
-  if (submitting) return (
-    <div className="flex flex-col gap-5 pb-6">
-      <PageHeaderWithBack title="Part 1.1 — Gap Filling" rightContent={undefined} />
-      <CalculatingResults />
-    </div>
+  // Memoize showTimer to prevent unnecessary re-renders
+  const showTimer = useMemo(
+    () => !loading && !error && !submitting && !result,
+    [loading, error, submitting, result]
   )
 
-  if (!questionData) {
+  // Loading state
+  if (loading) {
     return (
-      <div className="flex flex-col gap-5 pb-6">
-        <PageHeaderWithBack
-          title="Part 1.1 — Gap Filling"
-          rightContent={undefined}
-        />
-        <div className="elevo-card elevo-card-border p-8 flex flex-col items-center gap-3 text-center">
-          <p className="text-sm font-semibold text-on-surface-variant">
-            Savol topilmadi. Keyinroq urinib ko'ring.
-          </p>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <ExamLoading />
       </div>
     )
   }
 
-  const { question } = questionData
-
-  return (
-    <div className="flex flex-col gap-5 pb-6 animate-fade-in">
-      <PageHeaderWithBack
-        title="Part 1.1 — Gap Filling"
-        rightContent={
-          !result
-            ? <ExamTimer timeLeft={timeLeft} formatTime={formatTime} />
-            : undefined
-        }
+  // Error state
+  if (error) {
+    return (
+      <ErrorCard
+        error={error}
+        onRetry={retry}
+        onBack={() => window.history.back()}
       />
+    )
+  }
+
+  // Submitting state
+  if (submitting) {
+    return <CalculatingResults />
+  }
+
+  // No data state
+  if (!questionData) {
+    return (
+      <div className="elevo-card elevo-card-border p-8 flex flex-col items-center gap-3 text-center">
+        <p className="text-sm font-semibold text-on-surface-variant">
+          No question found. Try again later.
+        </p>
+      </div>
+    )
+  }
+
+  // Main content
+  return (
+    <div className="flex flex-col gap-5 animate-fade-in">
+      {/* Timer - Fixed position, no flickering */}
+      {showTimer && (
+        <div className="fixed top-4 right-4 z-50">
+          <ExamTimer timeLeft={timeLeft} formatTime={formatTime} />
+        </div>
+      )}
 
       {/* Passage card */}
       <div className="elevo-card elevo-card-border p-5 flex flex-col gap-4">
-        {question.title && (
+        {question?.title && (
           <h2 className="text-sm font-bold text-on-surface">{question.title}</h2>
         )}
-        {question.instruction && (
+        {question?.instruction && (
           <p className="text-xs text-on-surface-variant">{question.instruction}</p>
         )}
 
         {/* Text with inline inputs */}
-        <div className="rounded-xl p-4 elevo-card-border" style={{ background: "color-mix(in srgb, currentColor 3%, transparent)" }}>
+        <div
+          className="rounded-xl p-4 elevo-card-border"
+          style={{ background: "color-mix(in srgb, currentColor 3%, transparent)" }}
+        >
           <ReadingPart1Text
-            text={question.text}
-            positions={question.positions}
+            text={question?.text || ""}
+            positions={question?.positions || []}
             answers={answers}
             onAnswerChange={handleAnswerChange}
             result={result}
@@ -119,7 +129,24 @@ export function ReadingPart1Content() {
         )}
       </div>
 
-      {result && <ReadingPart1Result result={result} />}
+      {result && (
+        <>
+          <Suspense
+            fallback={<div className="elevo-card p-8 animate-pulse">Loading results...</div>}
+          >
+            <ReadingPart1Result result={result} />
+          </Suspense>
+
+          {/* Review Accordion */}
+          {questionData && (
+            <Suspense
+              fallback={<div className="elevo-card p-8 animate-pulse">Loading review...</div>}
+            >
+              <ReadingPart1ReviewAccordion questionData={questionData} />
+            </Suspense>
+          )}
+        </>
+      )}
     </div>
   )
 }

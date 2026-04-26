@@ -6,9 +6,17 @@
         "dev": "next dev --turbopack",
         "build": "next build",
         "start": "next start",
-        "tunnel": "bash tunnel.sh"
+        "tunnel": "bash tunnel.sh",
+        "analyze": "cross-env ANALYZE=true next build",
+        "analyze:server": "cross-env ANALYZE=true BUNDLE_ANALYZE=server next build",
+        "analyze:browser": "cross-env ANALYZE=true BUNDLE_ANALYZE=browser next build"
     },
     "dependencies": {
+        "@react-aria/utils": "^3.34.0",
+        "@react-stately/data": "^3.16.0",
+        "@react-stately/utils": "^3.12.0",
+        "@react-types/overlays": "^3.10.0",
+        "@react-types/shared": "^3.34.0",
         "@tailwindcss/postcss": "^4.2.2",
         "@tailwindcss/typography": "^0.5.19",
         "@tanstack/react-query": "^5.99.0",
@@ -43,10 +51,12 @@
         "zustand": "^5.0.12"
     },
     "devDependencies": {
+        "@next/bundle-analyzer": "^16.2.4",
         "@trivago/prettier-plugin-sort-imports": "^6.0.2",
         "@types/node": "^25.5.0",
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.3",
+        "cross-env": "^10.1.0",
         "postcss": "^8.5.8",
         "postcss-loader": "^8.2.1",
         "prettier": "^3.8.1",
