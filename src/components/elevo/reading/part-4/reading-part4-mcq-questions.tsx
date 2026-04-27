@@ -8,6 +8,7 @@ interface ReadingPart4McqQuestionsProps {
   answers: Record<number, number>  // question_id -> answer_id
   onSelect: (questionId: number, answerId: number) => void
   disabled: boolean
+  startNumber?: number  // For full mock: start numbering from this number
 }
 
 export const ReadingPart4McqQuestions = memo(function ReadingPart4McqQuestions({
@@ -15,12 +16,13 @@ export const ReadingPart4McqQuestions = memo(function ReadingPart4McqQuestions({
   answers,
   onSelect,
   disabled,
+  startNumber = 1,
 }: ReadingPart4McqQuestionsProps) {
   return (
     <div className="elevo-card overflow-hidden">
       <div className="px-4 py-3 bg-primary/10">
         <p className="text-[10px] font-black uppercase tracking-widest text-primary">
-          Multiple Choice (Questions 1-{questions.length})
+          Multiple Choice (Questions {startNumber}-{startNumber + questions.length - 1})
         </p>
       </div>
 
@@ -30,7 +32,7 @@ export const ReadingPart4McqQuestions = memo(function ReadingPart4McqQuestions({
         aria-label="Multiple choice questions"
       >
         {questions.map((q, qi) => {
-          const questionNumber = qi + 1
+          const questionNumber = startNumber + qi
           const selectedAnswerId = answers[q.id]
 
           return (

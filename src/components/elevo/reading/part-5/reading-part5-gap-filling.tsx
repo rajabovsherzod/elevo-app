@@ -10,9 +10,10 @@ interface GapInputProps {
   onChange: (pos: number, val: string) => void
   disabled: boolean
   result?: ReadingPart5EvaluateResponse | null
+  globalNumber?: number  // For displaying in placeholder
 }
 
-const GapInput = memo(function GapInput({ position, totalGaps, value, onChange, disabled, result }: GapInputProps) {
+const GapInput = memo(function GapInput({ position, totalGaps, value, onChange, disabled, result, globalNumber }: GapInputProps) {
   const detail = result?.details.gap_filling.find((d) => d.position === position)
   const checked = !!result
   const correct = detail?.correct
@@ -40,7 +41,7 @@ const GapInput = memo(function GapInput({ position, totalGaps, value, onChange, 
         value={value}
         onChange={(e) => onChange(position, e.target.value)}
         disabled={disabled}
-        placeholder={String(position)}
+        placeholder={String(globalNumber ?? position)}
         autoComplete="off"
         spellCheck={false}
         aria-label={ariaLabel}
@@ -61,11 +62,12 @@ const GapInput = memo(function GapInput({ position, totalGaps, value, onChange, 
 
 interface ReadingPart5GapFillingProps {
   summaryText: string
-  gapFillings: { position: number }[]
+  gapFillings: { position: number; globalNumber?: number }[]
   answers: Record<number, string>
   onAnswerChange: (pos: number, val: string) => void
   disabled: boolean
   result?: ReadingPart5EvaluateResponse | null
+  startNumber?: number  // For full mock: start numbering from this number
 }
 
 export const ReadingPart5GapFilling = memo(function ReadingPart5GapFilling({
@@ -75,6 +77,7 @@ export const ReadingPart5GapFilling = memo(function ReadingPart5GapFilling({
   onAnswerChange,
   disabled,
   result,
+  startNumber = 1,
 }: ReadingPart5GapFillingProps) {
   // Hook returns flattened format: [{position: 1}, {position: 2}, ...]
   const positions = gapFillings.map((g: any) => g.position)
@@ -95,7 +98,7 @@ export const ReadingPart5GapFilling = memo(function ReadingPart5GapFilling({
     <div className="elevo-card overflow-hidden">
       <div className="px-4 py-3 bg-primary/10">
         <p className="text-[10px] font-black uppercase tracking-widest text-primary">
-          For questions 1-{positions.length > 0 ? Math.max(...positions) : 0}, fill the missing information in the numbered spaces
+          For questions {startNumber}-{startNumber + positions.length - 1}, fill the missing information in the numbered spaces
         </p>
       </div>
 
@@ -109,6 +112,10 @@ export const ReadingPart5GapFilling = memo(function ReadingPart5GapFilling({
             const match = seg.match(/§§(\d+)§§/)
             if (match) {
               const pos = parseInt(match[1])
+              // Find the gap filling item with this position to get globalNumber
+              const gapItem = gapFillings.find(g => g.position === pos)
+              const globalNumber = gapItem?.globalNumber ?? (startNumber + positions.indexOf(pos))
+              
               return (
                 <GapInput
                   key={`gap-${pos}`}
@@ -118,6 +125,7 @@ export const ReadingPart5GapFilling = memo(function ReadingPart5GapFilling({
                   onChange={onAnswerChange}
                   disabled={disabled}
                   result={result}
+                  globalNumber={globalNumber}
                 />
               )
             }

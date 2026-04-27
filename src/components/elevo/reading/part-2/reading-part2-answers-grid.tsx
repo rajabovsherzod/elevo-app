@@ -10,6 +10,7 @@ interface ReadingPart2AnswersGridProps {
   matches: Record<number, number>  // passage_id -> question_id
   onSelect: (passageId: number, questionId: number) => void
   disabled: boolean
+  startNumber?: number  // For full mock: start numbering from this number
 }
 
 export const ReadingPart2AnswersGrid = memo(function ReadingPart2AnswersGrid({ 
@@ -17,13 +18,14 @@ export const ReadingPart2AnswersGrid = memo(function ReadingPart2AnswersGrid({
   questions,
   matches,
   onSelect,
-  disabled 
+  disabled,
+  startNumber = 1
 }: ReadingPart2AnswersGridProps) {
   return (
     <div className="elevo-card overflow-hidden">
       <div className="px-4 py-3 bg-primary/10">
         <p className="text-[10px] font-black uppercase tracking-widest text-primary">
-          Passages (1-{answers.length}) — Match to Questions
+          Passages ({startNumber}-{startNumber + answers.length - 1}) — Match to Questions
         </p>
       </div>
 
@@ -33,7 +35,7 @@ export const ReadingPart2AnswersGrid = memo(function ReadingPart2AnswersGrid({
         aria-label="Match passages to questions"
       >
         {answers.map((passage, pi) => {
-          const passageNumber = pi + 1  // 1, 2, 3... 8
+          const passageNumber = startNumber + pi  // startNumber, startNumber+1, etc.
           const selectedQuestionId = matches[passage.id]
           const selectedQuestion = questions.find(q => q.id === selectedQuestionId)
           const selectedLetter = selectedQuestion 

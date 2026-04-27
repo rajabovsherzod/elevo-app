@@ -10,6 +10,7 @@ interface ReadingPart3ParagraphsProps {
   matches: Record<number, number>  // paragraph_id -> heading_id
   onSelect: (paragraphId: number, headingId: number) => void
   disabled: boolean
+  startNumber?: number  // For full mock: start numbering from this number
 }
 
 export const ReadingPart3Paragraphs = memo(function ReadingPart3Paragraphs({
@@ -18,18 +19,19 @@ export const ReadingPart3Paragraphs = memo(function ReadingPart3Paragraphs({
   matches,
   onSelect,
   disabled,
+  startNumber = 1,
 }: ReadingPart3ParagraphsProps) {
   return (
     <div className="elevo-card overflow-hidden">
       <div className="px-4 py-3 bg-primary/10">
         <p className="text-[10px] font-black uppercase tracking-widest text-primary">
-          Paragraphs — Choose the Correct Heading
+          Paragraphs ({startNumber}-{startNumber + paragraphs.length - 1}) — Choose the Correct Heading
         </p>
       </div>
 
       <div className="flex flex-col gap-3 p-3">
         {paragraphs.map((paragraph, pi) => {
-          const paragraphNumber = ROMAN_NUMERALS[pi] ?? String(pi + 1)  // I, II, III... VI
+          const paragraphNumber = startNumber + pi  // startNumber, startNumber+1, etc.
           const selectedHeadingId = matches[paragraph.id]
 
           return (

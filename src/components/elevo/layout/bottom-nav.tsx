@@ -101,7 +101,13 @@ function NavTab({ item, isActive }: { item: NavItem; isActive: boolean }) {
 }
 
 // Exam page'larida BottomNav ko'rinmaydi (native app uslubida)
-const EXAM_ROUTES = ["/reading/part-", "/speaking/part-", "/listening/part-"]
+const EXAM_ROUTES = [
+  "/reading/part-", 
+  "/speaking/part-", 
+  "/listening/part-",
+  "/reading/mock",
+  "/listening/mock"
+]
 
 export function BottomNav() {
   const pathname = usePathname()

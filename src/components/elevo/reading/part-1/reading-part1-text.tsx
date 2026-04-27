@@ -13,7 +13,7 @@ interface GapInputProps {
 }
 
 const GapInput = memo(function GapInput({ position, totalGaps, value, onChange, disabled, result }: GapInputProps) {
-  const detail  = result?.details.find((d) => d.position === position)
+  const detail = result?.details?.find((d) => d.position === position)
   const checked = !!result
   const correct = detail?.correct
 
