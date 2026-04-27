@@ -261,7 +261,8 @@ function AllTextsAccordion({ examData, userAnswers }: {
                     Part 1 — Gap Filling (Questions 1-6)
                   </p>
                 </div>
-                <div className="ml-8 p-4 rounded-xl bg-surface-container-low border border-outline-variant">
+                {/* Content to'g'ridan-to'g'ri raqam ostidan, ml-8 yo'q */}
+                <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant">
                   {reading.part1.title && (
                     <h4 className="text-sm font-bold text-on-surface mb-2">{reading.part1.title}</h4>
                   )}
@@ -288,7 +289,8 @@ function AllTextsAccordion({ examData, userAnswers }: {
                     Part 2 — Matching (Questions 7-14)
                   </p>
                 </div>
-                <div className="ml-8 flex flex-col gap-4">
+                {/* Content to'g'ridan-to'g'ri raqam ostidan */}
+                <div className="flex flex-col gap-4">
                   {reading.part2.instruction && (
                     <p className="text-xs text-on-surface-variant">{reading.part2.instruction}</p>
                   )}
@@ -338,7 +340,8 @@ function AllTextsAccordion({ examData, userAnswers }: {
                     Part 3 — Headings (Questions 15-20)
                   </p>
                 </div>
-                <div className="ml-8 flex flex-col gap-4">
+                {/* Content to'g'ridan-to'g'ri raqam ostidan */}
+                <div className="flex flex-col gap-4">
                   {reading.part3.instruction && (
                     <p className="text-xs text-on-surface-variant">{reading.part3.instruction}</p>
                   )}
@@ -385,7 +388,8 @@ function AllTextsAccordion({ examData, userAnswers }: {
                     Part 4 — Multiple Choice (Questions 21-29)
                   </p>
                 </div>
-                <div className="ml-8 p-4 rounded-xl bg-surface-container-low border border-outline-variant">
+                {/* Content to'g'ridan-to'g'ri raqam ostidan */}
+                <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant">
                   {reading.part4.title && (
                     <h4 className="text-sm font-bold text-on-surface mb-2">{reading.part4.title}</h4>
                   )}
@@ -437,7 +441,8 @@ function AllTextsAccordion({ examData, userAnswers }: {
                     Part 5 — Mixed (Questions 30-35)
                   </p>
                 </div>
-                <div className="ml-8 p-4 rounded-xl bg-surface-container-low border border-outline-variant">
+                {/* Content to'g'ridan-to'g'ri raqam ostidan */}
+                <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant">
                   {reading.part5.title && (
                     <h4 className="text-sm font-bold text-on-surface mb-2">{reading.part5.title}</h4>
                   )}

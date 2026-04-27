@@ -24,8 +24,8 @@ export const ReadingPart2AnswersGrid = memo(function ReadingPart2AnswersGrid({
   return (
     <div className="elevo-card overflow-hidden">
       <div className="px-4 py-3 bg-primary/10">
-        <p className="text-[10px] font-black uppercase tracking-widest text-primary">
-          Passages ({startNumber}-{startNumber + answers.length - 1}) — Match to Questions
+        <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-primary">
+          Match Passages to Questions
         </p>
       </div>
 
@@ -67,9 +67,9 @@ export const ReadingPart2AnswersGrid = memo(function ReadingPart2AnswersGrid({
                 <p className="text-sm text-on-surface leading-relaxed flex-1">{passage.text}</p>
               </div>
 
-              {/* Question letter buttons - THIS IS WHERE YOU MATCH! */}
+              {/* Question letter buttons - 2x5 grid (mobile & desktop) */}
               <div 
-                className="flex flex-wrap gap-1.5 pl-10"
+                className="grid grid-cols-5 gap-1.5 pl-10"
                 role="radiogroup"
                 aria-label={`Select question for passage ${passageNumber}`}
               >
@@ -87,7 +87,7 @@ export const ReadingPart2AnswersGrid = memo(function ReadingPart2AnswersGrid({
                       disabled={disabled}
                       onClick={() => onSelect(passage.id, q.id)}
                       className={cx(
-                        "w-9 h-9 rounded-lg text-[12px] font-black transition-all duration-200 shrink-0",
+                        "h-9 rounded-lg text-[12px] font-black transition-all duration-200",
                         "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                         "disabled:cursor-not-allowed disabled:opacity-60",
                         isSelected

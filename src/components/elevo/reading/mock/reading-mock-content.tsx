@@ -29,7 +29,7 @@ import { ReadingPart5MCQQuestions } from "@/components/elevo/reading/part-5/read
 
 const PART_TITLES: Record<number, string> = {
   1: "Part 1 — Gap Filling",
-  2: "Part 2 — Matching",
+  2: "Part 2 — Match Passages",
   3: "Part 3 — Headings",
   4: "Part 4 — Multiple Choice",
   5: "Part 5 — Mixed",
@@ -119,10 +119,13 @@ export function ReadingMockContent() {
     )
   }
 
-  // Result state - NO BACK BUTTON
+  // Result state - WITH BACK BUTTON
   if (result) {
     return (
-      <div className="flex flex-col gap-5 animate-fade-in">
+      <div className="flex flex-col gap-4 animate-fade-in">
+        {/* Header with back button */}
+        <PageHeaderWithBack title="Full Mock Result" />
+        
         {/* Result page - direct render, no lazy loading */}
         <ReadingMockResult result={result} onRetry={retry} />
 

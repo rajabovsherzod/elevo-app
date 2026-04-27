@@ -49,8 +49,8 @@ export function PageHeaderWithBack({
             </button>
           )}
 
-          <div className="flex-1 min-w-0 pt-1">
-            <h1 className="text-xl font-bold text-on-surface tracking-tight">
+          <div className="flex-1 min-w-0 pt-1 max-w-[calc(100%-120px)]">
+            <h1 className="text-base sm:text-xl font-bold text-on-surface tracking-tight leading-tight">
               {title}
             </h1>
             {description && (

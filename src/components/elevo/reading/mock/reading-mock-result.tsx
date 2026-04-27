@@ -98,18 +98,15 @@ export function ReadingMockResult({ result, onRetry }: Props) {
       </div>
 
       {/* ── Part Breakdown ──────────────────────────────────────────────────── */}
-      <div className="elevo-card elevo-card-border shadow-card overflow-hidden">
-        <div
-          className="px-5 py-4 border-b bg-surface-container-lowest"
-          style={{ borderColor: "var(--el-nav-sep)" }}
-        >
-          <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
+      <div className="elevo-card elevo-card-border overflow-hidden">
+        <div className="px-4 py-3 bg-primary/10">
+          <p className="text-[10px] font-black uppercase tracking-widest text-primary">
             Part-by-Part Breakdown
           </p>
         </div>
 
-        <div className="flex flex-col">
-          {Object.entries(result.parts).map(([key, partResult], idx) => {
+        <div className="p-4 flex flex-col gap-3">
+          {Object.entries(result.parts).map(([key, partResult]) => {
             if (!partResult) return null
             const meta = PART_NAMES[key] || { label: key, desc: "" }
             const pct = Math.round(partResult.score_percent)
@@ -118,12 +115,7 @@ export function ReadingMockResult({ result, onRetry }: Props) {
             return (
               <div
                 key={key}
-                className="flex items-center gap-4 px-5 py-4"
-                style={
-                  idx < Object.keys(result.parts).length - 1
-                    ? { borderBottom: "1px solid var(--el-nav-sep)" }
-                    : undefined
-                }
+                className="flex items-center gap-4 p-4 rounded-xl bg-surface-container/50 border border-outline-variant"
               >
                 {/* Part info */}
                 <div className="flex-1 min-w-0">

@@ -19,7 +19,7 @@ export default function ReadingPart2Page() {
 
   return (
     <div className="flex flex-col gap-5 pb-6">
-      <PageHeaderWithBack title="Part 2 — Matching Headings" />
+      <PageHeaderWithBack title="Part 2 — Match Passages" />
       
       <Suspense
         fallback={
