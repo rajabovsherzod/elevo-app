@@ -184,6 +184,8 @@ export interface ListeningPart4AnswerDetail {
   question_id: number
   answer_question_id: number
   correct: boolean
+  correct_answer_id?: number | null
+  correct_answer?: string | null
 }
 
 export interface ListeningPart4EvaluateResponse {

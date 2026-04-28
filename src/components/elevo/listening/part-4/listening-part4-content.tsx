@@ -57,16 +57,13 @@ export function ListeningPart4Content() {
   if (phase === "result" && result && set) {
     return (
       <div className="flex flex-col gap-5 pb-6">
-
-        <Suspense fallback={<div className="elevo-card p-8 animate-pulse">Loading results...</div>}>
-          <ListeningPart4Result
-            result={result}
-            set={set}
-            audioUrl={audioUrl}
-            imageUrl={imageUrl}
-            userLetters={userLetters}
-          />
-        </Suspense>
+        <ListeningPart4Result
+          result={result}
+          set={set}
+          audioUrl={audioUrl}
+          imageUrl={imageUrl}
+          userLetters={userLetters}
+        />
       </div>
     )
   }
