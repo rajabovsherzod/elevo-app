@@ -53,10 +53,11 @@ const AnswerReviewGrid = memo(function AnswerReviewGrid({
                 {/* Answer */}
                 {isCorrect ? (
                   <div className="flex items-center gap-1.5">
-                    <p className="text-[10px] font-semibold uppercase text-on-surface-variant flex-shrink-0">
-                      YA:
+                    <p className="text-[11px] font-semibold uppercase text-on-surface-variant flex-shrink-0">
+                      <span className="hidden md:inline">Your Answer:</span>
+                      <span className="md:hidden">YA:</span>
                     </p>
-                    <span className="text-[13px] font-bold text-green-600 truncate">
+                    <span className="text-[11px] font-bold uppercase text-green-600 truncate">
                       {answer.userAnswer}
                     </span>
                   </div>
@@ -64,20 +65,22 @@ const AnswerReviewGrid = memo(function AnswerReviewGrid({
                   <div className="flex flex-col gap-1.5">
                     {/* User answer (wrong) */}
                     <div className="flex items-center gap-1.5">
-                      <p className="text-[10px] font-semibold uppercase text-on-surface-variant flex-shrink-0">
-                        YA:
+                      <p className="text-[11px] font-semibold uppercase text-on-surface-variant flex-shrink-0">
+                        <span className="hidden md:inline">Your Answer:</span>
+                        <span className="md:hidden">YA:</span>
                       </p>
-                      <span className="text-[13px] font-bold text-error line-through opacity-70 truncate">
+                      <span className="text-[11px] font-bold uppercase text-error line-through opacity-70 truncate">
                         {answer.userAnswer || "—"}
                       </span>
                     </div>
                     {/* Correct answer */}
                     {answer.correctAnswer && (
                       <div className="flex items-center gap-1.5">
-                        <p className="text-[10px] font-semibold uppercase text-on-surface-variant flex-shrink-0">
-                          CA:
+                        <p className="text-[11px] font-semibold uppercase text-on-surface-variant flex-shrink-0">
+                          <span className="hidden md:inline">Correct Answer:</span>
+                          <span className="md:hidden">CA:</span>
                         </p>
-                        <span className="text-[13px] font-bold text-green-600 truncate">
+                        <span className="text-[11px] font-bold uppercase text-green-600 truncate">
                           {answer.correctAnswer}
                         </span>
                       </div>
