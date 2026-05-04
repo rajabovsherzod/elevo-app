@@ -1,145 +1,99 @@
 "use client"
 
-import { lazy, Suspense, useMemo } from "react"
+import { lazy, Suspense } from "react"
 import { Button } from "@/components/base/buttons/button"
 import { CalculatingResults } from "@/components/elevo/shared/calculating-results"
-import { ErrorCard } from "@/components/elevo/shared/error-card"
-import { ExamLoading } from "@/components/elevo/shared/exam-loading"
-
-import { ListeningAudioBar } from "@/components/elevo/listening/shared/listening-audio-bar"
-import { ListeningInstruction } from "@/components/elevo/listening/shared/listening-instruction"
-import { ListeningProgressBar } from "@/components/elevo/listening/shared/listening-progress-bar"
+import {
+  ListeningAudioBar,
+  ListeningInstruction,
+  ListeningLoading,
+  ListeningError,
+  ListeningProgressBar,
+} from "@/components/elevo/listening/shared"
 import { ListeningPart1Mcq } from "./listening-part1-mcq"
 import { useListeningPart1 } from "./use-listening-part1"
-import { ErrorCode } from "@/lib/types/errors"
 
 const ListeningPart1Result = lazy(() =>
-  import("./listening-part1-result").then((mod) => ({
-    default: mod.ListeningPart1Result,
-  }))
+  import("./listening-part1-result").then(mod => ({ default: mod.ListeningPart1Result }))
 )
 
 export function ListeningPart1Content() {
   const {
-    phase,
-    questions,
-    audioUrl,
-    answers,
-    result,
-    isAudioPlaying,
-    errorMsg,
-    totalAnswered,
-    selectAnswer,
-    submit,
-    retry,
+    phase, questions, audioUrl, answers, result,
+    isAudioPlaying, errorMsg, totalAnswered,
+    selectAnswer, submit, retry,
   } = useListeningPart1()
 
-  // Memoize phase checks to prevent unnecessary re-renders
-  const isLoading = useMemo(() => phase === "loading", [phase])
-  const isError = useMemo(() => phase === "error", [phase])
-  const isSubmitting = useMemo(() => phase === "submitting", [phase])
-  const isResult = useMemo(() => phase === "result", [phase])
-  const isInstruction = useMemo(() => phase === "instruction", [phase])
-  const canAnswer = useMemo(() => phase === "question-audio" || phase === "exam", [phase])
-  const canSubmit = useMemo(() => phase === "exam", [phase])
-  const showAudioBar = useMemo(() => phase === "instruction" || phase === "question-audio", [phase])
+  if (phase === "loading") return <ListeningLoading title="Part 1 — Short Conversations" />
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <ExamLoading />
-      </div>
-    )
-  }
+  if (phase === "error") return (
+    <ListeningError
+      title="Part 1 — Short Conversations"
+      message={errorMsg ?? "Noma'lum xatolik. Qayta urinib ko'ring."}
+      onRetry={retry}
+    />
+  )
 
-  // Error state
-  if (isError) {
-    const appError = {
-      message: errorMsg ?? "Noma'lum xatolik. Qayta urinib ko'ring.",
-      code: ErrorCode.UNKNOWN,
-      retry: true,
-    }
-    
-    return (
-      <ErrorCard
-        error={appError}
-        onRetry={retry}
-        onBack={() => window.history.back()}
-      />
-    )
-  }
+  if (phase === "submitting") return <CalculatingResults />
 
-  // Submitting state
-  if (isSubmitting) {
-    return <CalculatingResults />
-  }
+  if (phase === "result" && result) return (
+    <div className="flex flex-col gap-5">
+      <Suspense fallback={<div className="elevo-card p-8 animate-pulse">Loading results...</div>}>
+        <ListeningPart1Result result={result} questions={questions} audioUrl={audioUrl} />
+      </Suspense>
+    </div>
+  )
 
-  // Result state
-  if (isResult && result) {
-    return (
-      <div className="flex flex-col gap-5 animate-fade-in">
+  const isLocked  = phase === "instruction"
+  const canSubmit = phase === "exam"
 
-        <Suspense fallback={<div className="elevo-card p-8 animate-pulse">Loading results...</div>}>
-          <ListeningPart1Result result={result} questions={questions} audioUrl={audioUrl} />
-        </Suspense>
-      </div>
-    )
-  }
-
-  // Main content - professional structure like reading parts
   return (
-    <div className="flex flex-col gap-5 animate-fade-in">
+    <div className="flex flex-col gap-4 pb-6">
 
-      {/* Instructions card */}
-      <div className="elevo-card elevo-card-border p-5 flex flex-col gap-4">
-        <ListeningInstruction text="You will hear some sentences. You will hear each sentence twice. Choose the correct reply to each sentence (A, B or C)." />
+      <ListeningInstruction
+        text="You will hear some sentences. Choose the correct reply to each sentence (A, B or C)."
+      />
 
-        {/* Audio status bar */}
-        {showAudioBar && (
-          <ListeningAudioBar
-            isPlaying={isAudioPlaying}
-            label={isInstruction ? "Instructions" : "Question audio"}
-          />
-        )}
+      {(phase === "instruction" || phase === "question-audio") && (
+        <ListeningAudioBar
+          isPlaying={isAudioPlaying}
+          label={phase === "instruction" ? "Instructions" : "Question audio"}
+        />
+      )}
 
-        {/* Progress bar during answer phase */}
-        {canAnswer && questions.length > 0 && (
-          <ListeningProgressBar
-            current={totalAnswered}
-            total={questions.length}
-            label="ta savol"
-          />
-        )}
-      </div>
+      {!isLocked && questions.length > 0 && (
+        <ListeningProgressBar
+          current={totalAnswered}
+          total={questions.length}
+          label="ta savol"
+        />
+      )}
 
-      {/* Questions card */}
       {questions.length > 0 && (
-        <div className="elevo-card elevo-card-border p-5 flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {questions.map((question, index) => (
             <ListeningPart1Mcq
-              key={question.id}
+              key={question.position}
               question={question}
               questionNumber={index + 1}
-              selectedAnswerId={answers[question.id]}
+              selectedLetter={answers[question.position]}
               onSelect={selectAnswer}
-              isLocked={isInstruction}
+              isLocked={isLocked}
             />
           ))}
+        </div>
+      )}
 
-          {/* Submit button */}
-          {canSubmit && (
-            <div className="flex justify-end pt-2">
-              <Button
-                size="md"
-                color="primary"
-                isDisabled={totalAnswered < questions.length}
-                onClick={submit}
-              >
-                Submit Answers
-              </Button>
-            </div>
-          )}
+      {canSubmit && questions.length > 0 && (
+        <div className="flex justify-end pt-2">
+          <Button
+            size="md"
+            color="primary"
+            isDisabled={totalAnswered < questions.length}
+            onClick={submit}
+          >
+            Submit Answers
+          </Button>
         </div>
       )}
     </div>

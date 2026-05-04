@@ -1,146 +1,190 @@
 import { apiClient } from "./client"
 import { ENDPOINTS } from "./endpoints"
 
-// ── Part 1 Types ──────────────────────────────────────────────────────────────
+// ── Part 1 Types (SIMPLE STRUCTURE) ──────────────────────────────────────────
 
 export interface ListeningPart1AnswerOption {
-  id: number
-  position: number
-  answer: string
+  letter: string  // "A", "B", "C", "D"
+  text: string
 }
 
-export interface ListeningPart1Question {
-  id: number
-  title: string | null
-  instruction: string | null
-  question: string | null
-  audio_url: string | null
+export interface ListeningPart1QuestionItem {
+  position: number  // 1-8
+  question: string
   answers: ListeningPart1AnswerOption[]
 }
 
 export interface ListeningPart1QuestionsResponse {
   exam_id: number
   part: number
-  question: ListeningPart1Question | ListeningPart1Question[]
-}
-
-export interface ListeningPart1SubmitAnswer {
   question_id: number
-  answer_id: number
+  title: string | null
+  instruction: string | null
+  question: string | null
+  audio_url: string | null
+  questions: ListeningPart1QuestionItem[]
 }
 
 export interface ListeningPart1EvaluateRequest {
-  exam_id: number
-  answers: ListeningPart1SubmitAnswer[]
+  answers: Record<string, string>  // {"1": "A", "2": "B", ...}
 }
 
-export interface ListeningPart1AnswerDetail {
-  question_id: number
-  answer_id: number
-  correct: boolean
-  user_answer_text: string | null
-  correct_answer_id: number | null
-  correct_answer_text: string | null
+export interface ListeningPart1ResultItem {
+  is_correct: boolean
+  user_answer: string
+  correct_answer: string
 }
 
 export interface ListeningPart1EvaluateResponse {
-  correct_count: number
-  total_questions: number
-  score_percent: number
-  details: ListeningPart1AnswerDetail[]
+  question: {
+    id: number
+    title: string | null
+    instruction: string | null
+    audio_url: string | null
+  }
+  results: Record<string, ListeningPart1ResultItem>  // {"1": {...}, "2": {...}, ...}
+  summary: {
+    correct_count: number
+    total: number
+    score_percent: number
+  }
 }
 
-// ── Part 2 Types ──────────────────────────────────────────────────────────────
-
-export interface ListeningPart2Question {
-  id: number
-  title: string | null
-  instruction: string | null
-  text: string | null
-  positions: number[]
-  audio_url: string | null
-}
+// ── Part 2 Types (SIMPLE STRUCTURE) ──────────────────────────────────────────
 
 export interface ListeningPart2QuestionsResponse {
   exam_id: number
   part: number
-  question: ListeningPart2Question
-}
-
-export interface ListeningPart2SubmitAnswer {
   question_id: number
-  position: number
-  answer: string
+  title: string | null
+  instruction: string | null
+  question: string | null  // Text with _1_, _2_, etc.
+  audio_url: string | null
+  positions: number[]  // [1, 2, 3, 4, 5]
 }
 
 export interface ListeningPart2EvaluateRequest {
-  exam_id: number
-  answers: ListeningPart2SubmitAnswer[]
+  answers: Record<string, string>  // {"1": "Paris", "2": "Monday", ...}
 }
 
-export interface ListeningPart2AnswerDetail {
-  question_id: number
-  position: number
-  answer: string
-  correct: boolean
-  correct_answer?: string | null
+export interface ListeningPart2ResultItem {
+  is_correct: boolean
+  user_answer: string
+  correct_answer: string
 }
 
 export interface ListeningPart2EvaluateResponse {
-  correct_count: number
-  total_questions: number
-  score_percent: number
-  details: ListeningPart2AnswerDetail[]
+  question: {
+    id: number
+    title: string | null
+    instruction: string | null
+    question: string | null  // Text with _1_, _2_, etc.
+    audio_url: string | null
+  }
+  results: Record<string, ListeningPart2ResultItem>  // {"1": {...}, "2": {...}, ...}
+  summary: {
+    correct_count: number
+    total: number
+    score_percent: number
+  }
 }
 
-// ── Part 3 Types ──────────────────────────────────────────────────────────────
+// ── Part 3 Types (SIMPLE STRUCTURE) ──────────────────────────────────────────
 
-export interface ListeningPart3QuestionItem {
-  id: number
+export interface ListeningPart3Speaker {
+  position: number  // 1-5
   text: string
 }
 
-export interface ListeningPart3AnswerOption {
-  id: number
+export interface ListeningPart3Option {
+  letter: string  // "A", "B", "C", "D", "E", "F"
   text: string
-}
-
-export interface ListeningPart3Set {
-  title: string | null
-  instruction: string | null
-  audio_url: string | null
-  questions: ListeningPart3QuestionItem[]
-  answers: ListeningPart3AnswerOption[]
 }
 
 export interface ListeningPart3QuestionsResponse {
   exam_id: number
   part: number
-  set: ListeningPart3Set
+  question_id: number
+  title: string | null
+  instruction: string | null
+  audio_url: string | null
+  speakers: ListeningPart3Speaker[]  // 5 speakers
+  options: ListeningPart3Option[]    // 6 options A-F
 }
 
-export interface ListeningPart3SubmitMatch {
+export interface ListeningPart3EvaluateRequest {
+  answers: Record<string, string>  // {"1": "A", "2": "C", "3": "B", "4": "F", "5": "D"}
+}
+
+export interface ListeningPart3ResultItem {
+  is_correct: boolean
+  user_answer: string
+  correct_answer: string
+}
+
+export interface ListeningPart3EvaluateResponse {
+  question: {
+    id: number
+    title: string | null
+    instruction: string | null
+    audio_url: string | null
+  }
+  results: Record<string, ListeningPart3ResultItem>  // {"1": {...}, "2": {...}, ...}
+  summary: {
+    correct_count: number
+    total: number
+    score_percent: number
+  }
+}
+
+// ── Part 3 Types (OLD COMPLEX STRUCTURE - for backward compatibility) ────────
+
+export interface ListeningPart3QuestionItemOld {
+  id: number
+  text: string
+}
+
+export interface ListeningPart3AnswerOptionOld {
+  id: number
+  text: string
+}
+
+export interface ListeningPart3SetOld {
+  title: string | null
+  instruction: string | null
+  audio_url: string | null
+  questions: ListeningPart3QuestionItemOld[]
+  answers: ListeningPart3AnswerOptionOld[]
+}
+
+export interface ListeningPart3QuestionsResponseOld {
+  exam_id: number
+  part: number
+  set: ListeningPart3SetOld
+}
+
+export interface ListeningPart3SubmitMatchOld {
   question_id: number
   answer_question_id: number
 }
 
-export interface ListeningPart3EvaluateRequest {
+export interface ListeningPart3EvaluateRequestOld {
   exam_id: number
-  matches: ListeningPart3SubmitMatch[]
+  matches: ListeningPart3SubmitMatchOld[]
 }
 
-export interface ListeningPart3AnswerDetail {
+export interface ListeningPart3AnswerDetailOld {
   question_id: number
   answer_question_id: number
   correct: boolean
   correct_answer_id: number | null
 }
 
-export interface ListeningPart3EvaluateResponse {
+export interface ListeningPart3EvaluateResponseOld {
   correct_count: number
   total_questions: number
   score_percent: number
-  details: ListeningPart3AnswerDetail[]
+  details: ListeningPart3AnswerDetailOld[]
 }
 
 // ── Part 4 Types ──────────────────────────────────────────────────────────────
@@ -200,118 +244,100 @@ export interface ListeningPart4EvaluateResponse {
 export async function getListeningPart1Questions(
   examId?: number
 ): Promise<ListeningPart1QuestionsResponse> {
-  const params: Record<string, unknown> = examId ? { exam_id: examId } : {}
+  // For simple structure, we need exam_id in URL
+  if (!examId) {
+    // Get default exam_id from somewhere or throw error
+    throw new Error("exam_id is required for Listening Part 1")
+  }
+  
+  const params: Record<string, unknown> = {}
   params._t = Date.now()
+  
   const { data } = await apiClient.get<ListeningPart1QuestionsResponse>(
-    ENDPOINTS.listening.part(1).question,
+    ENDPOINTS.listening.part1Simple.question(examId),
     { params }
   )
   return data
 }
 
 export async function evaluateListeningPart1(
+  examId: number,
+  questionId: number,
   payload: ListeningPart1EvaluateRequest
 ): Promise<ListeningPart1EvaluateResponse> {
   const { data } = await apiClient.post<ListeningPart1EvaluateResponse>(
-    ENDPOINTS.listening.part(1).evaluate,
+    ENDPOINTS.listening.part1Simple.evaluate(examId, questionId),
     payload
   )
   return data
 }
 
-// ── Part 2 API Functions ──────────────────────────────────────────────────────
+// ── Part 2 API Functions (SIMPLE STRUCTURE) ───────────────────────────────────
 
 export async function getListeningPart2Questions(
   examId?: number
 ): Promise<ListeningPart2QuestionsResponse> {
-  const params: Record<string, unknown> = examId ? { exam_id: examId } : {}
+  // For simple structure, we need exam_id in URL
+  if (!examId) {
+    // Get default exam_id from somewhere or throw error
+    throw new Error("exam_id is required for Listening Part 2")
+  }
+  
+  const params: Record<string, unknown> = {}
   params._t = Date.now()
-
-  const { data } = await apiClient.get<any>(
-    ENDPOINTS.listening.part(2).question,
+  
+  const { data } = await apiClient.get<ListeningPart2QuestionsResponse>(
+    ENDPOINTS.listening.part2Simple.question(examId),
     { params }
   )
-
-  const raw = data.question ?? data
-
-  const rawText: string | null =
-    raw.question      ??
-    raw.text          ?? raw.passage     ?? raw.body         ??
-    raw.content       ?? raw.paragraph   ?? raw.gap_text     ??
-    raw.question_text ?? raw.transcript  ?? null
-
-  const rawPositions: number[] = raw.positions ?? raw.gap_positions ?? raw.gaps ?? []
-  const positions: number[] =
-    rawPositions.length > 0
-      ? rawPositions
-      : rawText
-        ? [...new Set([...(rawText.matchAll(/_{1,}(\d+)_{1,}/g))].map(m => parseInt(m[1])))]
-        : []
-
-  const q: ListeningPart2Question = {
-    id:          raw.id          ?? 0,
-    title:       raw.title       ?? null,
-    instruction: raw.instruction ?? null,
-    text:        rawText,
-    positions,
-    audio_url:   raw.audio_url   ?? raw.audio ?? null,
-  }
-
-  return {
-    exam_id:  data.exam_id ?? raw.exam_id ?? 0,
-    part:     data.part    ?? 2,
-    question: q,
-  }
+  return data
 }
 
 export async function evaluateListeningPart2(
+  examId: number,
+  questionId: number,
   payload: ListeningPart2EvaluateRequest
 ): Promise<ListeningPart2EvaluateResponse> {
-  const { data } = await apiClient.post<any>(
-    ENDPOINTS.listening.part(2).evaluate,
+  const { data } = await apiClient.post<ListeningPart2EvaluateResponse>(
+    ENDPOINTS.listening.part2Simple.evaluate(examId, questionId),
     payload
   )
-
-  const rawDetails: any[] = data.details ?? []
-  const details: ListeningPart2AnswerDetail[] = rawDetails.map(d => ({
-    question_id:    d.question_id ?? 0,
-    position:       d.position    ?? 0,
-    answer:         d.answer      ?? d.user_answer ?? d.user_answer_text ?? "",
-    correct:        d.correct     ?? d.is_correct  ?? false,
-    correct_answer: d.correct_answer ?? d.correct_answer_text ?? d.right_answer ?? null,
-  }))
-
-  return {
-    correct_count:   data.correct_count   ?? 0,
-    total_questions: data.total_questions ?? details.length,
-    score_percent:   data.score_percent   ?? 0,
-    details,
-  }
+  return data
 }
 
-// ── Part 3 API Functions ──────────────────────────────────────────────────────
+// ── Part 3 API Functions (SIMPLE STRUCTURE) ───────────────────────────────────
 
 export async function getListeningPart3Questions(
   examId?: number
 ): Promise<ListeningPart3QuestionsResponse> {
-  const params: Record<string, unknown> = examId ? { exam_id: examId } : {}
+  // For simple structure, we need exam_id in URL
+  if (!examId) {
+    throw new Error("exam_id is required for Listening Part 3")
+  }
+  
+  const params: Record<string, unknown> = {}
   params._t = Date.now()
+  
   const { data } = await apiClient.get<ListeningPart3QuestionsResponse>(
-    ENDPOINTS.listening.part(3).question,
+    ENDPOINTS.listening.part3Simple.question(examId),
     { params }
   )
   return data
 }
 
 export async function evaluateListeningPart3(
+  examId: number,
+  questionId: number,
   payload: ListeningPart3EvaluateRequest
 ): Promise<ListeningPart3EvaluateResponse> {
   const { data } = await apiClient.post<ListeningPart3EvaluateResponse>(
-    ENDPOINTS.listening.part(3).evaluate,
+    ENDPOINTS.listening.part3Simple.evaluate(examId, questionId),
     payload
   )
   return data
 }
+
+// ── Part 3 API Functions (OLD - for backward compatibility) ───────────────────
 
 // ── Part 5 Types ──────────────────────────────────────────────────────────────
 

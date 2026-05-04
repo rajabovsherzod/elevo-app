@@ -187,7 +187,10 @@ export function useListeningPart4() {
         })
         .filter(m => m.answer_question_id !== 0)
 
-      const res = await evaluateListeningPart4({ exam_id: eid, matches: matchList })
+      const [res] = await Promise.all([
+        evaluateListeningPart4({ exam_id: eid, matches: matchList }),
+        sleep(1500),
+      ])
       setResult(res)
       setPhase("result")
     } catch (err: any) {

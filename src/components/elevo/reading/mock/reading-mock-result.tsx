@@ -1,8 +1,9 @@
 "use client"
 
 import { useRef, useEffect, memo } from "react"
-import { Crown, RefreshCw, CheckCircle2, XCircle } from "@/lib/icons"
+import { Crown, RefreshCw } from "@/lib/icons"
 import type { ReadingMockEvaluateResponse } from "@/lib/api/reading"
+import { AnswerCard } from "@/components/elevo/shared"
 
 // ── Answer Review Grid Component ─────────────────────────────────────────────
 const AnswerReviewGrid = memo(function AnswerReviewGrid({
@@ -30,66 +31,15 @@ const AnswerReviewGrid = memo(function AnswerReviewGrid({
       <div className="p-4">
         {/* Desktop: 3 columns, Mobile: 2 columns */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {allAnswers.map((answer) => {
-            const isCorrect = answer.isCorrect
-
-            return (
-              <div
-                key={answer.position}
-                className="flex flex-col gap-2 p-3 rounded-xl bg-surface-container/50 border border-outline-variant"
-              >
-                {/* Header: Number + Icon */}
-                <div className="flex items-center justify-between">
-                  <span className="w-6 h-6 rounded-lg text-[11px] font-black flex items-center justify-center bg-primary text-white shadow-sm">
-                    {answer.position}
-                  </span>
-                  {isCorrect ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-error" />
-                  )}
-                </div>
-
-                {/* Answer */}
-                {isCorrect ? (
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-[11px] font-semibold uppercase text-on-surface-variant flex-shrink-0">
-                      <span className="hidden md:inline">Your Answer:</span>
-                      <span className="md:hidden">YA:</span>
-                    </p>
-                    <span className="text-[11px] font-bold uppercase text-green-600 truncate">
-                      {answer.userAnswer}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-1.5">
-                    {/* User answer (wrong) */}
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-[11px] font-semibold uppercase text-on-surface-variant flex-shrink-0">
-                        <span className="hidden md:inline">Your Answer:</span>
-                        <span className="md:hidden">YA:</span>
-                      </p>
-                      <span className="text-[11px] font-bold uppercase text-error line-through opacity-70 truncate">
-                        {answer.userAnswer || "—"}
-                      </span>
-                    </div>
-                    {/* Correct answer */}
-                    {answer.correctAnswer && (
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-[11px] font-semibold uppercase text-on-surface-variant flex-shrink-0">
-                          <span className="hidden md:inline">Correct Answer:</span>
-                          <span className="md:hidden">CA:</span>
-                        </p>
-                        <span className="text-[11px] font-bold uppercase text-green-600 truncate">
-                          {answer.correctAnswer}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+          {allAnswers.map((answer) => (
+            <AnswerCard
+              key={answer.position}
+              questionNumber={answer.position}
+              userAnswer={answer.userAnswer}
+              correctAnswer={answer.correctAnswer}
+              isCorrect={answer.isCorrect}
+            />
+          ))}
         </div>
       </div>
     </div>

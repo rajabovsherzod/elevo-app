@@ -1,14 +1,12 @@
 import { useState, useCallback, memo } from "react"
 import { cx } from "@/utils/cx"
-import type { ListeningPart1Question } from "@/lib/api/listening"
-
-const LABELS = ["A", "B", "C", "D", "E"]
+import type { ListeningPart1QuestionItem } from "@/lib/api/listening"
 
 interface ListeningPart1McqProps {
-  question: ListeningPart1Question
+  question: ListeningPart1QuestionItem
   questionNumber: number
-  selectedAnswerId: number | undefined
-  onSelect?: (questionId: number, answerId: number) => void
+  selectedLetter: string | undefined
+  onSelect?: (position: number, letter: string) => void
   isLocked?: boolean
 }
 
@@ -16,14 +14,14 @@ interface ListeningPart1McqProps {
 export const ListeningPart1Mcq = memo(function ListeningPart1Mcq({
   question,
   questionNumber,
-  selectedAnswerId,
+  selectedLetter,
   onSelect,
   isLocked = false,
 }: ListeningPart1McqProps) {
-  const [tooltipVisible, setTooltipVisible] = useState<number | null>(null)
+  const [tooltipVisible, setTooltipVisible] = useState<string | null>(null)
 
-  const showTooltip = useCallback((answerId: number) => {
-    setTooltipVisible(answerId)
+  const showTooltip = useCallback((letter: string) => {
+    setTooltipVisible(letter)
     setTimeout(() => setTooltipVisible(null), 2000)
   }, [])
 
@@ -43,25 +41,24 @@ export const ListeningPart1Mcq = memo(function ListeningPart1Mcq({
 
       {/* Options */}
       <div className="flex flex-col gap-2 p-4" role="radiogroup" aria-label={`Question ${questionNumber} options`}>
-        {question.answers.map((answer, i) => {
-          const label = LABELS[i] ?? String(i + 1)
-          const isSelected = selectedAnswerId === answer.id
-          const isTooltipShowing = tooltipVisible === answer.id
+        {question.answers.map((answer) => {
+          const isSelected = selectedLetter === answer.letter
+          const isTooltipShowing = tooltipVisible === answer.letter
 
           return (
-            <div key={answer.id} className="relative">
+            <div key={answer.letter} className="relative">
               <button
                 type="button"
                 role="radio"
                 aria-checked={isSelected}
-                aria-label={`Question ${questionNumber}, Option ${label}: ${answer.answer}`}
+                aria-label={`Question ${questionNumber}, Option ${answer.letter}: ${answer.text}`}
                 aria-disabled={isLocked}
                 onClick={() => {
                   if (isLocked) {
-                    showTooltip(answer.id)
+                    showTooltip(answer.letter)
                     return
                   }
-                  onSelect?.(question.id, answer.id)
+                  onSelect?.(question.position, answer.letter)
                 }}
                 className={cx(
                   "w-full px-4 py-3 rounded-xl text-sm text-left transition-all duration-150",
@@ -80,9 +77,9 @@ export const ListeningPart1Mcq = memo(function ListeningPart1Mcq({
                       : "bg-surface-container-high text-on-surface-variant"
                   )}
                 >
-                  {label}
+                  {answer.letter}
                 </span>
-                <span className="flex-1 font-medium">{answer.answer}</span>
+                <span className="flex-1 font-medium">{answer.text}</span>
               </button>
 
               {/* Tooltip for locked answers */}

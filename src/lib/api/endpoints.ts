@@ -14,6 +14,8 @@ export const ENDPOINTS = {
     },
   },
   writing: {
+    task: (examId: number, taskType: string) =>
+      `/api/multilevel/${examId}/writing/${taskType}/task/`,
     evaluate: "/api/multilevel/writing/evaluate/",
   },
   reading: {
@@ -30,7 +32,24 @@ export const ENDPOINTS = {
     part: (n: 1 | 2 | 3 | 4 | 5 | 6) => ({
       question: `/api/multilevel/listening/part${n}/question/`,
       evaluate: `/api/multilevel/listening/part${n}/evaluate/`,
+      evaluateSimple: (examId: number, questionId: number) => 
+        `/api/multilevel/${examId}/listening/part${n}/${questionId}/evaluate/`,
     }),
+    part1Simple: {
+      question: (examId: number) => `/api/multilevel/${examId}/listening/part1/question/`,
+      evaluate: (examId: number, questionId: number) => 
+        `/api/multilevel/${examId}/listening/part1/${questionId}/evaluate/`,
+    },
+    part2Simple: {
+      question: (examId: number) => `/api/multilevel/${examId}/listening/part2/question/`,
+      evaluate: (examId: number, questionId: number) => 
+        `/api/multilevel/${examId}/listening/part2/${questionId}/evaluate/`,
+    },
+    part3Simple: {
+      question: (examId: number) => `/api/multilevel/${examId}/listening/part3/question/`,
+      evaluate: (examId: number, questionId: number) => 
+        `/api/multilevel/${examId}/listening/part3/${questionId}/evaluate/`,
+    },
     all: {
       question: "/api/multilevel/listening/all/question/",
       evaluate: "/api/multilevel/listening/all/evaluate/",

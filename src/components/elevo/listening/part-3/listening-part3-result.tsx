@@ -1,32 +1,24 @@
 "use client"
 
 import { useRef, useEffect, useState, memo } from "react"
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp } from "@/lib/icons"
+import { ChevronDown, ChevronUp } from "@/lib/icons"
 import { AnimatePresence, motion } from "framer-motion"
 import { cx } from "@/utils/cx"
 import type {
   ListeningPart3EvaluateResponse,
-  ListeningPart3Set,
-  ListeningPart3QuestionItem,
+  ListeningPart3QuestionsResponse,
 } from "@/lib/api/listening"
 import { ListeningAudioPlayer } from "@/components/elevo/listening/shared"
+import { AnswerCard } from "@/components/elevo/shared/answer-card"
 
 // ── Answer Review Grid ────────────────────────────────────────────────────────
 const AnswerReview = memo(function AnswerReview({
-  details,
-  speakers,
-  options,
+  result,
+  data,
 }: {
-  details: ListeningPart3EvaluateResponse["details"]
-  speakers: ListeningPart3QuestionItem[]
-  options: ListeningPart3Set["answers"]
+  result: ListeningPart3EvaluateResponse
+  data: ListeningPart3QuestionsResponse
 }) {
-  const letterOf = (id: number | null | undefined) => {
-    if (id == null) return "—"
-    const i = options.findIndex(o => o.id === id)
-    return i >= 0 ? String.fromCharCode(65 + i) : "—"
-  }
-
   return (
     <div className="elevo-card elevo-card-border overflow-hidden">
       <div className="px-4 py-3 bg-primary/10">
@@ -34,43 +26,21 @@ const AnswerReview = memo(function AnswerReview({
       </div>
       <div className="p-4">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {details.map((d, i) => {
-            const speaker = speakers.find(s => s.id === d.question_id)
-            const userLetter    = letterOf(d.answer_question_id)
-            const correctLetter = letterOf(d.correct_answer_id)
+          {data.speakers.map((speaker, i) => {
+            const positionKey = String(speaker.position)
+            const resultItem = result.results?.[positionKey]
+            const isCorrect = resultItem?.is_correct ?? false
+            const userAnswer = resultItem?.user_answer ?? ""
+            const correctAnswer = resultItem?.correct_answer ?? ""
 
             return (
-              <div
-                key={d.question_id}
-                className="flex flex-col gap-2 p-3 rounded-xl bg-surface-container/50 border border-outline-variant"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="w-6 h-6 rounded-lg text-[11px] font-black flex items-center justify-center bg-indigo-500 text-white shadow-sm">
-                    {i + 1}
-                  </span>
-                  {d.correct
-                    ? <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    : <XCircle      className="w-4 h-4 text-error" />
-                  }
-                </div>
-
-                <p className="text-[11px] text-on-surface-variant font-medium truncate">
-                  {speaker?.text ?? `Speaker ${i + 1}`}
-                </p>
-
-                {d.correct ? (
-                  <span className="text-[13px] font-black text-green-600">{userLetter}</span>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13px] font-black text-error line-through opacity-70">
-                      {userLetter}
-                    </span>
-                    {d.correct_answer_id && (
-                      <span className="text-[13px] font-black text-green-600">{correctLetter}</span>
-                    )}
-                  </div>
-                )}
-              </div>
+              <AnswerCard
+                key={speaker.position}
+                questionNumber={i + 1}
+                isCorrect={isCorrect}
+                userAnswer={userAnswer}
+                correctAnswer={correctAnswer}
+              />
             )
           })}
         </div>
@@ -83,7 +53,7 @@ const AnswerReview = memo(function AnswerReview({
 const OptionsAccordion = memo(function OptionsAccordion({
   options,
 }: {
-  options: ListeningPart3Set["answers"]
+  options: Array<{ letter: string; text: string }>
 }) {
   const [open, setOpen] = useState(false)
 
@@ -91,7 +61,7 @@ const OptionsAccordion = memo(function OptionsAccordion({
     <div className="elevo-card elevo-card-border overflow-hidden">
       <div className="px-4 py-3 bg-primary/10">
         <p className="text-[10px] font-black uppercase tracking-widest text-primary">
-          Answer Options (A–{String.fromCharCode(64 + options.length)})
+          Answer Options (A–{options[options.length - 1]?.letter ?? "F"})
         </p>
       </div>
       <button
@@ -115,10 +85,10 @@ const OptionsAccordion = memo(function OptionsAccordion({
             className="overflow-hidden"
           >
             <div className="px-4 pb-4 pt-1 flex flex-col gap-3">
-              {options.map((opt, i) => (
-                <div key={opt.id} className="flex gap-3">
+              {options.map((opt) => (
+                <div key={opt.letter} className="flex gap-3">
                   <span className="w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center bg-indigo-500 text-white flex-shrink-0 mt-0.5">
-                    {String.fromCharCode(65 + i)}
+                    {opt.letter}
                   </span>
                   <p className="text-xs text-on-surface leading-relaxed">{opt.text}</p>
                 </div>
@@ -131,18 +101,90 @@ const OptionsAccordion = memo(function OptionsAccordion({
   )
 })
 
+// ── Speaker Matches Accordion ─────────────────────────────────────────────────
+const SpeakerMatchesAccordion = memo(function SpeakerMatchesAccordion({
+  result,
+  data,
+}: {
+  result: ListeningPart3EvaluateResponse
+  data: ListeningPart3QuestionsResponse
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="elevo-card elevo-card-border overflow-hidden">
+      <div className="px-4 py-3 bg-primary/10">
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary">
+          Correct Matches
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => setOpen(p => !p)}
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container/40 transition-colors"
+      >
+        <span className="text-sm font-bold text-on-surface">View speaker matches</span>
+        {open
+          ? <ChevronUp   className="w-4 h-4 text-on-surface-variant" />
+          : <ChevronDown className="w-4 h-4 text-on-surface-variant" />
+        }
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4 pt-1 flex flex-col gap-2.5">
+              {data.speakers.map((speaker, i) => {
+                const positionKey = String(speaker.position)
+                const resultItem = result.results?.[positionKey]
+                const correctLetter = resultItem?.correct_answer ?? ""
+                const correctOption = data.options.find(opt => opt.letter === correctLetter)
+
+                return (
+                  <div key={speaker.position} className="flex items-start gap-2">
+                    {/* Position number */}
+                    <span className="w-5 h-5 rounded text-[10px] font-black flex items-center justify-center bg-indigo-500 text-white flex-shrink-0 mt-0.5">
+                      {i + 1}
+                    </span>
+                    {/* Speaker text */}
+                    <span className="text-xs text-on-surface font-medium flex-shrink-0">
+                      {speaker.text}
+                    </span>
+                    {/* Correct letter with green background */}
+                    <span className="px-2 py-0.5 rounded text-[11px] font-black bg-green-500 text-white flex-shrink-0">
+                      {correctLetter}
+                    </span>
+                    {/* Option text */}
+                    <span className="text-xs text-on-surface-variant leading-relaxed">
+                      {correctOption?.text}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+})
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface Props {
   result:   ListeningPart3EvaluateResponse
-  set:      ListeningPart3Set
-  speakers: ListeningPart3QuestionItem[]
+  data:     ListeningPart3QuestionsResponse
   audioUrl: string | null
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export function ListeningPart3Result({ result, set, speakers, audioUrl }: Props) {
+export function ListeningPart3Result({ result, data, audioUrl }: Props) {
   const barRef       = useRef<HTMLDivElement>(null)
-  const scorePercent = Math.round(result.score_percent)
+  const scorePercent = Math.round(result.summary.score_percent)
   const isGood       = scorePercent >= 70
 
   useEffect(() => {
@@ -166,11 +208,11 @@ export function ListeningPart3Result({ result, set, speakers, audioUrl }: Props)
               Your Score
             </p>
             <p className="text-sm font-semibold text-on-surface">
-              {result.correct_count} / {result.total_questions} correct
+              {result.summary.correct_count} / {result.summary.total} correct
             </p>
-            {result.total_questions - result.correct_count > 0 && (
+            {result.summary.total - result.summary.correct_count > 0 && (
               <p className="text-xs text-on-surface-variant mt-0.5">
-                {result.total_questions - result.correct_count} incorrect
+                {result.summary.total - result.summary.correct_count} incorrect
               </p>
             )}
           </div>
@@ -188,7 +230,7 @@ export function ListeningPart3Result({ result, set, speakers, audioUrl }: Props)
       </div>
 
       {/* Answer review */}
-      <AnswerReview details={result.details} speakers={speakers} options={set.answers} />
+      <AnswerReview result={result} data={data} />
 
       {/* Audio player */}
       {audioUrl && (
@@ -201,7 +243,10 @@ export function ListeningPart3Result({ result, set, speakers, audioUrl }: Props)
       )}
 
       {/* Options accordion */}
-      <OptionsAccordion options={set.answers} />
+      <OptionsAccordion options={data.options} />
+
+      {/* Speaker matches accordion */}
+      <SpeakerMatchesAccordion result={result} data={data} />
     </div>
   )
 }

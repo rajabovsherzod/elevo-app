@@ -1,24 +1,18 @@
 "use client"
 
-import { lazy, Suspense } from "react"
 import { Button }             from "@/components/base/buttons/button"
 
 import { CalculatingResults } from "@/components/elevo/shared"
 import { ListeningAudioBar, ListeningInstruction, ListeningLoading, ListeningError, ListeningProgressBar } from "@/components/elevo/listening/shared"
 import { ListeningPart2GapText }  from "./listening-part2-gap-text"
+import { ListeningPart2Result }   from "./listening-part2-result"
 import { useListeningPart2 }      from "./use-listening-part2"
-
-const ListeningPart2Result = lazy(() =>
-  import("./listening-part2-result").then((mod) => ({
-    default: mod.ListeningPart2Result,
-  }))
-)
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export function ListeningPart2Content() {
   const {
     phase,
-    question,
+    data,
     audioUrl,
     answers,
     result,
@@ -45,27 +39,25 @@ export function ListeningPart2Content() {
     )
   }
 
-  if (phase === "submitting") return (
-    <div className="flex flex-col gap-5 pb-6">
-
-      <CalculatingResults />
-    </div>
-  )
-
-  if (phase === "result" && result && question) {
+  if (phase === "submitting") {
     return (
       <div className="flex flex-col gap-5 pb-6">
+        <CalculatingResults />
+      </div>
+    )
+  }
 
-        <Suspense fallback={<div className="elevo-card p-8 animate-pulse">Loading results...</div>}>
-          <ListeningPart2Result result={result} question={question} audioUrl={audioUrl} />
-        </Suspense>
+  if (phase === "result" && result && data) {
+    return (
+      <div className="flex flex-col gap-5 pb-6">
+        <ListeningPart2Result result={result} data={data} audioUrl={audioUrl} />
       </div>
     )
   }
 
   // inputs locked only during instruction — open as soon as audio starts playing
-  const inputsLocked = phase === "instruction"
-  const canSubmit    = phase === "exam"
+  const inputsLocked = false  // Never lock inputs - better UX
+  const canSubmit    = phase === "exam" || phase === "instruction" || phase === "question-audio"  // Always show submit
 
   return (
     <div className="flex flex-col gap-4 pb-6">
@@ -82,14 +74,14 @@ export function ListeningPart2Content() {
         />
       )}
 
-      {/* Gap fill text — visible from instruction phase onward, locked until exam */}
-      {question && (
+      {/* Gap fill text — visible from instruction phase onward, never locked */}
+      {data && (
         <div className="elevo-card elevo-card-border p-5 flex flex-col gap-4">
-          {question.title && (
-            <h2 className="text-sm font-bold text-on-surface">{question.title}</h2>
+          {data.title && (
+            <h2 className="text-sm font-bold text-on-surface">{data.title}</h2>
           )}
-          {question.instruction && (
-            <p className="text-xs text-on-surface-variant">{question.instruction}</p>
+          {data.instruction && (
+            <p className="text-xs text-on-surface-variant">{data.instruction}</p>
           )}
 
           <div
@@ -97,8 +89,8 @@ export function ListeningPart2Content() {
             style={{ background: "color-mix(in srgb, currentColor 3%, transparent)" }}
           >
             <ListeningPart2GapText
-              text={question.text ?? ""}
-              positions={question.positions}
+              text={data.question ?? ""}
+              positions={data.positions}
               answers={answers}
               onAnswerChange={setAnswer}
               disabled={inputsLocked}
@@ -106,19 +98,17 @@ export function ListeningPart2Content() {
             />
           </div>
 
-          {/* Progress indicator — only during answer phase */}
-          {!inputsLocked && (
-            <ListeningProgressBar
-              current={filledCount}
-              total={question.positions.length}
-              label="ta bo'shliq"
-            />
-          )}
+          {/* Progress indicator — always show */}
+          <ListeningProgressBar
+            current={filledCount}
+            total={data.positions.length}
+            label="ta bo'shliq"
+          />
         </div>
       )}
 
-      {/* Submit */}
-      {canSubmit && question && (
+      {/* Submit - always visible */}
+      {canSubmit && data && (
         <div className="flex justify-end pt-2">
           <Button
             size="md"

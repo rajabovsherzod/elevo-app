@@ -21,9 +21,6 @@ const LOAD_TIMEOUT_MS = 30_000
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 1_500
 
-const API_BASE = () =>
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "")
-
 function sleep(ms: number) {
   return new Promise<void>(resolve => setTimeout(resolve, ms))
 }
@@ -182,7 +179,10 @@ export function useListeningPart5() {
         question_id: Number(qid),
         answer_id:   Number(aid),
       }))
-      const res = await evaluateListeningPart5({ exam_id: eid, answers })
+      const [res] = await Promise.all([
+        evaluateListeningPart5({ exam_id: eid, answers }),
+        sleep(1500),
+      ])
       setResult(res)
       setPhase("result")
     } catch (err: any) {

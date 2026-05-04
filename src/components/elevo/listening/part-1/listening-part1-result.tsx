@@ -1,16 +1,17 @@
 "use client"
 
 import { useRef, useEffect, useState, memo } from "react"
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp } from "@/lib/icons"
+import { ChevronDown, ChevronUp } from "@/lib/icons"
 import { AnimatePresence, motion } from "framer-motion"
 import { cx } from "@/utils/cx"
-import type { ListeningPart1EvaluateResponse, ListeningPart1Question } from "@/lib/api/listening"
+import type { ListeningPart1EvaluateResponse, ListeningPart1QuestionItem } from "@/lib/api/listening"
 import { ListeningAudioPlayer } from "@/components/elevo/listening/shared"
+import { AnswerCard } from "@/components/elevo/shared"
 
 // ── Memoized Answer Review Component ──────────────────────────────────────────
-const AnswerReview = memo(function AnswerReview({ details, questions }: {
-  details: ListeningPart1EvaluateResponse["details"]
-  questions: ListeningPart1Question[]
+const AnswerReview = memo(function AnswerReview({ results, questions }: {
+  results: Record<string, { is_correct: boolean; user_answer: string; correct_answer: string }>
+  questions: ListeningPart1QuestionItem[]
 }) {
   return (
     <div className="elevo-card elevo-card-border overflow-hidden">
@@ -21,49 +22,18 @@ const AnswerReview = memo(function AnswerReview({ details, questions }: {
       </div>
       <div className="p-4">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {details.map((d, i) => {
-            const question  = questions.find(q => q.id === d.question_id)
-            const isCorrect = d.correct
+          {questions.map((q, i) => {
+            const result = results[String(q.position)]
+            if (!result) return null
 
             return (
-              <div
-                key={d.question_id}
-                className="flex flex-col gap-2 p-3 rounded-xl bg-surface-container/50 border border-outline-variant"
-              >
-                {/* Question number + status */}
-                <div className="flex items-center justify-between">
-                  <span className="w-6 h-6 rounded-lg text-[11px] font-black flex items-center justify-center bg-indigo-500 text-white shadow-sm">
-                    {i + 1}
-                  </span>
-                  {isCorrect
-                    ? <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    : <XCircle      className="w-4 h-4 text-error" />
-                  }
-                </div>
-
-                {/* Question text */}
-                {question?.question && (
-                  <p className="text-[11px] text-on-surface-variant leading-relaxed line-clamp-2">
-                    {question.question}
-                  </p>
-                )}
-
-                {/* Answer */}
-                {isCorrect ? (
-                  <span className="text-[11px] font-bold text-green-600 truncate">
-                    {d.user_answer_text ?? "—"}
-                  </span>
-                ) : (
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[11px] font-bold text-error line-through opacity-70 truncate">
-                      {d.user_answer_text ?? "—"}
-                    </span>
-                    <span className="text-[11px] font-bold text-green-600 truncate">
-                      {d.correct_answer_text ?? "—"}
-                    </span>
-                  </div>
-                )}
-              </div>
+              <AnswerCard
+                key={q.position}
+                questionNumber={i + 1}
+                userAnswer={result.user_answer}
+                correctAnswer={result.correct_answer}
+                isCorrect={result.is_correct}
+              />
             )
           })}
         </div>
@@ -73,8 +43,12 @@ const AnswerReview = memo(function AnswerReview({ details, questions }: {
 })
 
 // ── Memoized Questions Accordion ──────────────────────────────────────────────
-const QuestionsAccordion = memo(function QuestionsAccordion({ questions }: {
-  questions: ListeningPart1Question[]
+const QuestionsAccordion = memo(function QuestionsAccordion({ 
+  questions,
+  results 
+}: {
+  questions: ListeningPart1QuestionItem[]
+  results: Record<string, { is_correct: boolean; user_answer: string; correct_answer: string }>
 }) {
   const [questionsOpen, setQuestionsOpen] = useState(false)
 
@@ -86,29 +60,47 @@ const QuestionsAccordion = memo(function QuestionsAccordion({ questions }: {
         </p>
       </div>
       <AccordionRow
-        title="View Questions"
+        title="View Questions with Correct Answers"
         open={questionsOpen}
         onToggle={() => setQuestionsOpen(p => !p)}
         last
       >
         <div className="px-4 pb-4 pt-1 flex flex-col gap-4">
-          {questions.map((q, i) => (
-            <div key={q.id} className="flex flex-col gap-2">
-              <p className="text-sm font-semibold text-on-surface">
-                <span className="text-primary font-black">{i + 1}.</span> {q.question}
-              </p>
-              <div className="pl-6 flex flex-col gap-1.5">
-                {q.answers.map((a, ai) => (
-                  <p key={a.id} className="text-xs text-on-surface-variant">
-                    <span className="font-bold text-on-surface">
-                      {String.fromCharCode(65 + ai)}.
-                    </span>{" "}
-                    {a.answer.length > 2 && a.answer[1] === "." ? a.answer.slice(3) : a.answer}
+          {questions.map((q, i) => {
+            const result = results[String(q.position)]
+            const correctLetter = result?.correct_answer || ""
+            
+            return (
+              <div key={q.position} className="flex flex-col gap-2">
+                <div className="flex items-start gap-2">
+                  <span className="w-7 h-7 rounded-lg text-[11px] font-black flex items-center justify-center shrink-0 bg-indigo-500 text-white">
+                    {i + 1}
+                  </span>
+                  <p className="text-sm font-semibold text-on-surface flex-1">
+                    {q.question}
                   </p>
-                ))}
+                </div>
+                <div className="pl-9 flex flex-col gap-1.5">
+                  {q.answers.map((a) => {
+                    const isCorrect = a.letter === correctLetter
+                    return (
+                      <p key={a.letter} className="text-xs text-on-surface-variant">
+                        <span className="font-bold text-on-surface">
+                          {a.letter}.
+                        </span>{" "}
+                        {a.text}
+                        {isCorrect && (
+                          <span className="ml-2 px-2 py-0.5 rounded-md bg-green-500/10 text-green-600 text-[10px] font-bold">
+                            Correct
+                          </span>
+                        )}
+                      </p>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </AccordionRow>
     </div>
@@ -162,14 +154,14 @@ function AccordionRow({
 // ── Props ──────────────────────────────────────────────────────────────────────
 interface Props {
   result:    ListeningPart1EvaluateResponse
-  questions: ListeningPart1Question[]
+  questions: ListeningPart1QuestionItem[]
   audioUrl:  string | null
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export function ListeningPart1Result({ result, questions, audioUrl }: Props) {
   const barRef       = useRef<HTMLDivElement>(null)
-  const scorePercent = Math.round(result.score_percent)
+  const scorePercent = Math.round(result.summary.score_percent)
   const isGood       = scorePercent >= 70
 
   useEffect(() => {
@@ -193,11 +185,11 @@ export function ListeningPart1Result({ result, questions, audioUrl }: Props) {
               Your Score
             </p>
             <p className="text-sm font-semibold text-on-surface">
-              {result.correct_count} / {result.total_questions} correct
+              {result.summary.correct_count} / {result.summary.total} correct
             </p>
-            {result.total_questions - result.correct_count > 0 && (
+            {result.summary.total - result.summary.correct_count > 0 && (
               <p className="text-xs text-on-surface-variant mt-0.5">
-                {result.total_questions - result.correct_count} incorrect
+                {result.summary.total - result.summary.correct_count} incorrect
               </p>
             )}
           </div>
@@ -215,7 +207,7 @@ export function ListeningPart1Result({ result, questions, audioUrl }: Props) {
       </div>
 
       {/* ── Answer review - memoized to prevent re-renders ── */}
-      <AnswerReview details={result.details} questions={questions} />
+      <AnswerReview results={result.results} questions={questions} />
 
       {/* ── Audio player - completely isolated ── */}
       {audioUrl && (
@@ -228,7 +220,7 @@ export function ListeningPart1Result({ result, questions, audioUrl }: Props) {
       )}
 
       {/* ── Questions accordion - memoized to prevent audio re-render ── */}
-      <QuestionsAccordion questions={questions} />
+      <QuestionsAccordion questions={questions} results={result.results} />
     </div>
   )
 }
