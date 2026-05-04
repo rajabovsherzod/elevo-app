@@ -4,30 +4,18 @@ import { CheckCircle2, XCircle, AlertCircle } from "@/lib/icons"
 import { useRef, useEffect } from "react"
 import type {
   ReadingPart4EvaluateResponse,
-  ReadingPart4QuestionItem,
+  ReadingPart4Question,
 } from "@/lib/api/reading"
 
-function answerLetter(answerId: number | null | undefined, question: ReadingPart4QuestionItem): string {
-  if (answerId == null) return "—"
-  const idx = question.answers.findIndex((a) => a.id === answerId)
-  if (question.answers.length === 4) {
-    // MCQ: A, B, C, D
-    return idx >= 0 ? String.fromCharCode(65 + idx) : "—"
-  } else {
-    // T/F/NG: True, False, Not Given
-    return idx >= 0 ? question.answers[idx].answer : "—"
-  }
-}
-
 interface Props {
-  result:    ReadingPart4EvaluateResponse
-  questions: ReadingPart4QuestionItem[]
+  result: ReadingPart4EvaluateResponse
+  questions: ReadingPart4Question[]
 }
 
 export function ReadingPart4Result({ result, questions }: Props) {
-  const barRef       = useRef<HTMLDivElement>(null)
-  const scorePercent = Math.round(result.score_percent)
-  const isGood       = scorePercent >= 70
+  const barRef = useRef<HTMLDivElement>(null)
+  const scorePercent = Math.round(result.summary.score_percent)
+  const isGood = scorePercent >= 70
 
   useEffect(() => {
     const el = barRef.current
@@ -51,11 +39,11 @@ export function ReadingPart4Result({ result, questions }: Props) {
               Your Score
             </p>
             <p className="text-sm font-semibold text-on-surface">
-              {result.correct_count} / {result.total_questions} correct
+              {result.summary.correct_count} / {result.summary.total} correct
             </p>
-            {result.total_questions - result.correct_count > 0 && (
+            {result.summary.total - result.summary.correct_count > 0 && (
               <p className="text-xs text-on-surface-variant mt-1">
-                {result.total_questions - result.correct_count} unanswered or incorrect
+                {result.summary.total - result.summary.correct_count} incorrect
               </p>
             )}
           </div>
@@ -72,7 +60,7 @@ export function ReadingPart4Result({ result, questions }: Props) {
         </div>
       </div>
 
-      {/* Answer review */}
+      {/* Answer review - Card style like Part 2/3 */}
       <div className="elevo-card overflow-hidden">
         <div className="px-4 py-3 bg-primary/10">
           <p className="text-[10px] font-black uppercase tracking-widest text-primary">
@@ -80,80 +68,84 @@ export function ReadingPart4Result({ result, questions }: Props) {
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 p-3">
-          {result.details.map((d, i) => {
-            const question = questions.find((q) => q.id === d.question_id)
-            const hasUserAnswer = d.answer_id != null && d.answer_id !== undefined
-            const userAnswer = hasUserAnswer && question ? answerLetter(d.answer_id, question) : "Missed"
+        {/* Desktop: 3 columns, Mobile: 2 columns */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4">
+          {Object.entries(result.results).map(([position, res]) => {
+            const question = questions.find((q) => q.position === parseInt(position))
+            const isCorrect = res.is_correct
+            const pos = parseInt(position)
             
-            // Correct answer ni ham harf/text ga aylantiramiz
-            let correctAnswerDisplay = "—"
-            if (question && d.correct_answer) {
-              const correctAnswerObj = question.answers.find(a => a.answer === d.correct_answer)
-              if (correctAnswerObj) {
-                correctAnswerDisplay = answerLetter(correctAnswerObj.id, question)
-              } else {
-                correctAnswerDisplay = d.correct_answer
-              }
-            }
-
-            const isMissed = !hasUserAnswer
-            const isCorrect = d.correct && !isMissed
-            const isWrong = !d.correct && !isMissed
+            // For questions 1-4 (MCQ): show only letter (A, B, C, D)
+            // For questions 5-9 (T/F/NG): show full text (TRUE/FALSE/NOT GIVEN)
+            const isTFNG = pos >= 5
+            const userAnswerDisplay = isTFNG 
+              ? (question?.answers.find(a => a.letter === res.user_answer)?.text || res.user_answer)
+              : res.user_answer
+            const correctAnswerDisplay = isTFNG
+              ? (question?.answers.find(a => a.letter === res.correct_answer)?.text || res.correct_answer)
+              : res.correct_answer
 
             return (
               <div
-                key={d.question_id}
-                className="flex items-start gap-3 px-4 py-3.5 rounded-xl transition-all duration-200"
+                key={position}
+                className="flex flex-col gap-2 p-3 rounded-xl bg-surface-container/50 border border-outline-variant"
               >
-                {/* Question number */}
-                <span className="w-7 h-7 rounded-lg text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 bg-indigo-500 text-white shadow-sm">
-                  {i + 1}
-                </span>
-
-                <div className="flex-1 min-w-0">
-                  {question && (
-                    <p className="text-xs text-on-surface-variant mb-2 leading-relaxed">{question.question}</p>
-                  )}
+                {/* Header: Number + Icon */}
+                <div className="flex items-center justify-between">
+                  <span className="w-6 h-6 rounded-lg text-[11px] font-black flex items-center justify-center bg-indigo-500 text-white shadow-sm">
+                    {position}
+                  </span>
                   {isCorrect ? (
-                    <div className="flex items-center gap-2">
-                      <span className="px-3 h-8 rounded-lg bg-green-500 text-white text-[13px] font-black flex items-center justify-center shadow-sm">
-                        {userAnswer}
-                      </span>
-                      <span className="text-sm font-bold text-green-600">Correct</span>
-                    </div>
-                  ) : isMissed ? (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-3 h-8 rounded-lg bg-amber-500/20 text-amber-600 text-[13px] font-black flex items-center justify-center border border-amber-500/30">
-                        Missed
-                      </span>
-                      <span className="text-on-surface-variant text-lg font-bold">→</span>
-                      <span className="px-3 h-8 rounded-lg bg-green-500 text-white text-[13px] font-black flex items-center justify-center shadow-sm">
-                        {correctAnswerDisplay}
-                      </span>
-                    </div>
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
                   ) : (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* User's wrong answer */}
-                      <span className="px-3 h-8 rounded-lg bg-red-500/10 text-error text-[13px] font-black flex items-center justify-center line-through opacity-70 border border-red-500/20">
-                        {userAnswer}
-                      </span>
-                      {/* Arrow */}
-                      <span className="text-on-surface-variant text-lg font-bold">→</span>
-                      {/* Correct answer */}
-                      <span className="px-3 h-8 rounded-lg bg-green-500 text-white text-[13px] font-black flex items-center justify-center shadow-sm">
-                        {correctAnswerDisplay}
-                      </span>
-                    </div>
+                    <XCircle className="w-4 h-4 text-error" />
                   )}
                 </div>
 
-                {isCorrect
-                  ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-1" />
-                  : isMissed
-                  ? <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-1" />
-                  : <XCircle className="w-5 h-5 text-error shrink-0 mt-1" />
-                }
+                {/* Answer */}
+                {isCorrect ? (
+                  <div className="flex items-center gap-1.5">
+                    {/* Desktop: "Your Answer:", Mobile: "YA:" */}
+                    <p className="text-[10px] font-semibold uppercase text-on-surface-variant flex-shrink-0 hidden md:inline">
+                      Your Answer:
+                    </p>
+                    <p className="text-[10px] font-semibold uppercase text-on-surface-variant flex-shrink-0 md:hidden">
+                      YA:
+                    </p>
+                    <span className="text-[10px] font-bold text-green-600 truncate">
+                      {userAnswerDisplay}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {/* User answer (wrong) */}
+                    <div className="flex items-center gap-1.5">
+                      {/* Desktop: "Your Answer:", Mobile: "YA:" */}
+                      <p className="text-[10px] font-semibold uppercase text-on-surface-variant flex-shrink-0 hidden md:inline">
+                        Your Answer:
+                      </p>
+                      <p className="text-[10px] font-semibold uppercase text-on-surface-variant flex-shrink-0 md:hidden">
+                        YA:
+                      </p>
+                      <span className="text-[10px] font-bold text-error line-through opacity-70 truncate">
+                        {userAnswerDisplay || "—"}
+                      </span>
+                    </div>
+                    {/* Correct answer */}
+                    <div className="flex items-center gap-1.5">
+                      {/* Desktop: "Correct Answer:", Mobile: "CA:" */}
+                      <p className="text-[10px] font-semibold uppercase text-on-surface-variant flex-shrink-0 hidden md:inline">
+                        Correct Answer:
+                      </p>
+                      <p className="text-[10px] font-semibold uppercase text-on-surface-variant flex-shrink-0 md:hidden">
+                        CA:
+                      </p>
+                      <span className="text-[10px] font-bold text-green-600 truncate">
+                        {correctAnswerDisplay}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}

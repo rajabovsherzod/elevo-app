@@ -1,42 +1,25 @@
 "use client"
 
-import { useState, memo, useCallback, useMemo } from "react"
+import { useState, memo, useCallback } from "react"
 import { ChevronDown, ChevronUp } from "@/lib/icons"
 import { AnimatePresence, motion } from "framer-motion"
-import type { ReadingPart5QuestionResponse } from "@/lib/api/reading-part5"
+import type { ReadingPart5QuestionResponse, ReadingPart5EvaluateResponse } from "@/lib/api/reading"
+import { ReadingPart5TextOnly } from "./reading-part5-text-only"
 
 interface Props {
   questionData: ReadingPart5QuestionResponse
+  result?: ReadingPart5EvaluateResponse | null
 }
 
 export const ReadingPart5ReviewAccordion = memo(function ReadingPart5ReviewAccordion({ 
-  questionData 
+  questionData,
+  result,
 }: Props) {
-  const [textOpen, setTextOpen] = useState(true)
-  const [summaryOpen, setSummaryOpen] = useState(false)
+  const [mainTextOpen, setMainTextOpen] = useState(true)
+  const [summaryOpen, setSummaryOpen] = useState(true)
   const [mcqOpen, setMcqOpen] = useState(false)
 
-  const { text } = questionData
-
-  // Memoized text processing - only recalculate when summary_text changes
-  const processedSummaryText = useMemo(
-    () => text?.summary_text?.replace(/_{1,}(\d+)_{1,}/g, "__________") || "",
-    [text?.summary_text]
-  )
-
-  // Memoized gap filling positions - only recalculate when gap_fillings change
-  const gapFillingPositions = useMemo(
-    () => text?.gap_fillings?.flatMap((gf: any) => 
-      gf.positions.map((pos: number) => ({
-        position: pos,
-        answer: gf.answers?.find((a: any) => a.position === pos)?.answer || ""
-      }))
-    ) || [],
-    [text?.gap_fillings]
-  )
-
-  // Stable function references - prevent unnecessary re-renders
-  const toggleText = useCallback(() => setTextOpen((prev) => !prev), [])
+  const toggleMainText = useCallback(() => setMainTextOpen((prev) => !prev), [])
   const toggleSummary = useCallback(() => setSummaryOpen((prev) => !prev), [])
   const toggleMcq = useCallback(() => setMcqOpen((prev) => !prev), [])
 
@@ -49,15 +32,17 @@ export const ReadingPart5ReviewAccordion = memo(function ReadingPart5ReviewAccor
       </div>
 
       <div className="flex flex-col">
-        {/* Main Text Section */}
+        {/* Main Text (Asosiy katta text) */}
         <div className="border-b border-surface-container-high">
           <button
             type="button"
-            onClick={toggleText}
+            onClick={toggleMainText}
             className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container/50 transition-colors"
           >
-            <span className="text-sm font-bold text-on-surface">Main Text</span>
-            {textOpen ? (
+            <span className="text-sm font-bold text-on-surface">
+              Reading Text
+            </span>
+            {mainTextOpen ? (
               <ChevronUp className="w-5 h-5 text-on-surface-variant" />
             ) : (
               <ChevronDown className="w-5 h-5 text-on-surface-variant" />
@@ -65,7 +50,7 @@ export const ReadingPart5ReviewAccordion = memo(function ReadingPart5ReviewAccor
           </button>
 
           <AnimatePresence>
-            {textOpen && (
+            {mainTextOpen && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
@@ -73,15 +58,15 @@ export const ReadingPart5ReviewAccordion = memo(function ReadingPart5ReviewAccor
                 transition={{ duration: 0.3, ease: "easeInOut" }}
                 className="overflow-hidden"
               >
-                <div className="px-4 pb-4">
-                  {text.title && (
-                    <h3 className="text-base font-bold text-on-surface mb-2">{text.title}</h3>
-                  )}
-                  {text.instruction && (
-                    <p className="text-xs text-on-surface-variant mb-3 italic">{text.instruction}</p>
-                  )}
-                  <div className="text-sm text-on-surface leading-relaxed whitespace-pre-wrap">
-                    {text.text}
+                <div className="px-3 py-2">
+                  <div className="rounded-lg p-3 elevo-card-border" style={{ background: "color-mix(in srgb, currentColor 3%, transparent)" }}>
+                    <div className="prose prose-sm max-w-none text-on-surface">
+                      {questionData.main_text.split('\n\n').map((paragraph, idx) => (
+                        <p key={idx} className="text-xs sm:text-sm md:text-base leading-relaxed mb-3 last:mb-0">
+                          {paragraph}
+                        </p>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -89,7 +74,7 @@ export const ReadingPart5ReviewAccordion = memo(function ReadingPart5ReviewAccor
           </AnimatePresence>
         </div>
 
-        {/* Summary Text Section */}
+        {/* Summary with Gap Filling (Questions 1-4) */}
         <div className="border-b border-surface-container-high">
           <button
             type="button"
@@ -97,7 +82,7 @@ export const ReadingPart5ReviewAccordion = memo(function ReadingPart5ReviewAccor
             className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container/50 transition-colors"
           >
             <span className="text-sm font-bold text-on-surface">
-              Summary Text (Gap Filling)
+              Summary with Correct Answers ({questionData.gap_positions.length} gaps)
             </span>
             {summaryOpen ? (
               <ChevronUp className="w-5 h-5 text-on-surface-variant" />
@@ -115,17 +100,13 @@ export const ReadingPart5ReviewAccordion = memo(function ReadingPart5ReviewAccor
                 transition={{ duration: 0.3, ease: "easeInOut" }}
                 className="overflow-hidden"
               >
-                <div className="px-4 pb-4">
-                  <div className="text-sm text-on-surface leading-relaxed whitespace-pre-wrap">
-                    {processedSummaryText}
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {gapFillingPositions.map(({ position, answer }) => (
-                      <div key={position} className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10">
-                        <span className="text-xs font-bold text-primary">{position}.</span>
-                        <span className="text-xs font-semibold text-on-surface">{answer}</span>
-                      </div>
-                    ))}
+                <div className="px-3 py-2">
+                  <div className="rounded-lg p-3 elevo-card-border" style={{ background: "color-mix(in srgb, currentColor 3%, transparent)" }}>
+                    <ReadingPart5TextOnly
+                      text={questionData.summary_text}
+                      gapPositions={questionData.gap_positions}
+                      results={result?.results || {}}
+                    />
                   </div>
                 </div>
               </motion.div>
@@ -133,7 +114,7 @@ export const ReadingPart5ReviewAccordion = memo(function ReadingPart5ReviewAccor
           </AnimatePresence>
         </div>
 
-        {/* MCQ Questions Section */}
+        {/* MCQ Questions (Questions 5-6) */}
         <div>
           <button
             type="button"
@@ -141,7 +122,7 @@ export const ReadingPart5ReviewAccordion = memo(function ReadingPart5ReviewAccor
             className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container/50 transition-colors"
           >
             <span className="text-sm font-bold text-on-surface">
-              Multiple Choice Questions ({text?.mcq_questions?.length || 0})
+              Multiple Choice Questions ({questionData.questions.length})
             </span>
             {mcqOpen ? (
               <ChevronUp className="w-5 h-5 text-on-surface-variant" />
@@ -160,26 +141,38 @@ export const ReadingPart5ReviewAccordion = memo(function ReadingPart5ReviewAccor
                 className="overflow-hidden"
               >
                 <div className="px-4 pb-4 flex flex-col gap-4">
-                  {text?.mcq_questions?.map((q, qi) => (
-                    <div key={q.id} className="flex flex-col gap-2">
-                      <p className="text-sm font-semibold text-on-surface">
-                        <span className="text-primary font-black">{qi + 5}.</span> {q.question}
-                      </p>
-                      <div className="pl-6 flex flex-col gap-1.5">
-                        {q.answers.map((answer, ai) => {
-                          const letter = String.fromCharCode(65 + ai)
-                          return (
-                            <p key={answer.id} className="text-xs text-on-surface-variant">
-                              <span className="font-bold text-on-surface">{letter}.</span> {answer.answer}
-                              {answer.is_correct && (
-                                <span className="ml-2 text-green-600 font-bold">✓</span>
-                              )}
-                            </p>
-                          )
-                        })}
+                  {questionData.questions.map((q) => {
+                    // Find correct answer from result
+                    const correctLetter = result?.results[q.position.toString()]?.correct_answer || ""
+                    
+                    return (
+                      <div key={q.position} className="flex flex-col gap-2">
+                        <div className="flex items-start gap-2">
+                          <span className="w-7 h-7 rounded-lg text-[11px] font-black flex items-center justify-center shrink-0 bg-indigo-500 text-white">
+                            {q.position}
+                          </span>
+                          <p className="text-sm font-semibold text-on-surface flex-1">
+                            {q.question}
+                          </p>
+                        </div>
+                        <div className="pl-9 flex flex-col gap-1.5">
+                          {q.answers.map((answer) => {
+                            const isCorrect = answer.letter === correctLetter
+                            return (
+                              <p key={answer.letter} className="text-xs text-on-surface-variant">
+                                <span className="font-bold text-on-surface">{answer.letter}.</span> {answer.text}
+                                {isCorrect && (
+                                  <span className="ml-2 px-2 py-0.5 rounded-md bg-green-500/10 text-green-600 text-[10px] font-bold">
+                                    Correct
+                                  </span>
+                                )}
+                              </p>
+                            )
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </motion.div>
             )}

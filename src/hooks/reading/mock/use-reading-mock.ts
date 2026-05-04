@@ -2,14 +2,15 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import {
-  getReadingFullMockQuestions,
-  evaluateReadingFullMock,
-  type ReadingFullMockQuestionsResponse,
-  type ReadingFullMockEvaluateResponse,
-} from "@/lib/api/reading-mock"
+  getReadingMockQuestion,
+  evaluateReadingMock,
+  type ReadingMockQuestionResponse,
+  type ReadingMockEvaluateResponse,
+} from "@/lib/api/reading"
 import { useExamTimer } from "@/hooks/shared"
 
 const TIMER_DURATION = 60 * 60 // 60 minutes
+const DEFAULT_EXAM_ID = parseInt(process.env.NEXT_PUBLIC_DEFAULT_EXAM_ID || "1")
 
 export type MockPart = 1 | 2 | 3 | 4 | 5
 
@@ -18,34 +19,19 @@ export function useReadingMock() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [examData, setExamData] = useState<ReadingFullMockQuestionsResponse | null>(null)
-  const [result, setResult] = useState<ReadingFullMockEvaluateResponse | null>(null)
+  const [examData, setExamData] = useState<ReadingMockQuestionResponse | null>(null)
+  const [result, setResult] = useState<ReadingMockEvaluateResponse | null>(null)
   const [currentPart, setCurrentPart] = useState<MockPart>(1)
 
-  // ── Per-part answers ────────────────────────────────────────────────────────
-  const [part1Answers, setPart1Answers] = useState<Record<number, string>>({})
-  const [part2Matches, setPart2Matches] = useState<Record<number, number>>({})
-  const [part3Matches, setPart3Matches] = useState<Record<number, number>>({})
-  const [part4Answers, setPart4Answers] = useState<Record<number, number>>({})
-  const [part5GapAnswers, setPart5GapAnswers] = useState<Record<string, string>>({})
-  const [part5McqAnswers, setPart5McqAnswers] = useState<Record<number, number>>({})
+  // ── Global answers (positions 1-35) ────────────────────────────────────────
+  const [answers, setAnswers] = useState<Record<string, string>>({})
 
   // Refs for stable access in callbacks
   const examDataRef = useRef(examData)
-  const part1AnswersRef = useRef(part1Answers)
-  const part2MatchesRef = useRef(part2Matches)
-  const part3MatchesRef = useRef(part3Matches)
-  const part4AnswersRef = useRef(part4Answers)
-  const part5GapAnswersRef = useRef(part5GapAnswers)
-  const part5McqAnswersRef = useRef(part5McqAnswers)
+  const answersRef = useRef(answers)
 
   useEffect(() => { examDataRef.current = examData }, [examData])
-  useEffect(() => { part1AnswersRef.current = part1Answers }, [part1Answers])
-  useEffect(() => { part2MatchesRef.current = part2Matches }, [part2Matches])
-  useEffect(() => { part3MatchesRef.current = part3Matches }, [part3Matches])
-  useEffect(() => { part4AnswersRef.current = part4Answers }, [part4Answers])
-  useEffect(() => { part5GapAnswersRef.current = part5GapAnswers }, [part5GapAnswers])
-  useEffect(() => { part5McqAnswersRef.current = part5McqAnswers }, [part5McqAnswers])
+  useEffect(() => { answersRef.current = answers }, [answers])
 
   // ── Timer ───────────────────────────────────────────────────────────────────
   const timer = useExamTimer({
@@ -60,28 +46,17 @@ export function useReadingMock() {
     setLoading(true)
     setError(null)
 
-    getReadingFullMockQuestions()
+    getReadingMockQuestion(DEFAULT_EXAM_ID)
       .then((data) => {
         if (cancelled) return
         setExamData(data)
-
-        // Initialize Part 1 answers
-        const p1Init: Record<number, string> = {}
-        if (data.reading.part1.questions) {
-          data.reading.part1.questions.forEach((q) => { p1Init[q.position] = "" })
+        
+        // Initialize empty answers for all 35 positions
+        const initialAnswers: Record<string, string> = {}
+        for (let i = 1; i <= 35; i++) {
+          initialAnswers[i.toString()] = ""
         }
-        setPart1Answers(p1Init)
-
-        // Initialize Part 5 gap answers
-        const p5Init: Record<string, string> = {}
-        if (data.reading.part5.gap_fillings) {
-          data.reading.part5.gap_fillings.forEach((gf: any) => {
-            gf.positions.forEach((pos: any) => {
-              p5Init[`${gf.id}_${pos.position}`] = ""
-            })
-          })
-        }
-        setPart5GapAnswers(p5Init)
+        setAnswers(initialAnswers)
 
         timer.reset()
         setLoading(false)
@@ -95,34 +70,54 @@ export function useReadingMock() {
     return () => { cancelled = true }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Part 1 handlers ─────────────────────────────────────────────────────────
+  // ── Answer handlers (global positions 1-35) ─────────────────────────────────
+  const handleAnswerChange = useCallback((globalPosition: number, value: string) => {
+    setAnswers((prev) => ({ ...prev, [globalPosition.toString()]: value }))
+  }, [])
+
+  // ── Part-specific handlers (convert to global positions) ───────────────────
+  // Part 1: positions 1-6
   const handlePart1Change = useCallback((position: number, value: string) => {
-    setPart1Answers((prev) => ({ ...prev, [position]: value }))
-  }, [])
+    const globalPosition = position  // Part 1: 1-6
+    handleAnswerChange(globalPosition, value)
+  }, [handleAnswerChange])
 
-  // ── Part 2 handlers ─────────────────────────────────────────────────────────
-  const handlePart2Select = useCallback((passageId: number, questionId: number) => {
-    setPart2Matches((prev) => ({ ...prev, [passageId]: questionId }))
-  }, [])
+  // Part 2: positions 7-14 (passage position -> letter)
+  const handlePart2Select = useCallback((passagePosition: number, letter: string) => {
+    const globalPosition = 6 + passagePosition  // Part 2: 7-14
+    handleAnswerChange(globalPosition, letter)
+  }, [handleAnswerChange])
 
-  // ── Part 3 handlers ─────────────────────────────────────────────────────────
-  const handlePart3Select = useCallback((paragraphId: number, headingId: number) => {
-    setPart3Matches((prev) => ({ ...prev, [paragraphId]: headingId }))
-  }, [])
+  // Part 3: positions 15-20 (paragraph position -> letter)
+  const handlePart3Select = useCallback((paragraphPosition: number, letter: string) => {
+    const globalPosition = 14 + paragraphPosition  // Part 3: 15-20
+    handleAnswerChange(globalPosition, letter)
+  }, [handleAnswerChange])
 
-  // ── Part 4 handlers ─────────────────────────────────────────────────────────
-  const handlePart4Select = useCallback((questionId: number, answerId: number) => {
-    setPart4Answers((prev) => ({ ...prev, [questionId]: answerId }))
-  }, [])
+  // Part 4: positions 21-29 (question position -> letter)
+  const handlePart4Select = useCallback((questionPosition: number, letter: string) => {
+    const globalPosition = 20 + questionPosition  // Part 4: 21-29
+    handleAnswerChange(globalPosition, letter)
+  }, [handleAnswerChange])
 
-  // ── Part 5 handlers ─────────────────────────────────────────────────────────
-  const handlePart5GapChange = useCallback((key: string, value: string) => {
-    setPart5GapAnswers((prev) => ({ ...prev, [key]: value }))
-  }, [])
+  // Part 5 gap filling: positions 30-33 (gap position -> text)
+  const handlePart5GapChange = useCallback((gapPosition: number, value: string) => {
+    const globalPosition = 29 + gapPosition  // Part 5 gap: 30-33
+    handleAnswerChange(globalPosition, value)
+  }, [handleAnswerChange])
 
-  const handlePart5McqSelect = useCallback((questionId: number, answerId: number) => {
-    setPart5McqAnswers((prev) => ({ ...prev, [questionId]: answerId }))
-  }, [])
+  // Part 5 MCQ: positions 34-35 (question position -> letter)
+  const handlePart5McqSelect = useCallback((questionPosition: number, letter: string) => {
+    const data = examDataRef.current
+    if (!data) return
+    
+    // questionPosition backend dan keladi (5, 6)
+    // Global position: 34, 35
+    const gapCount = data.part5.gap_positions.length  // 4
+    const localMcqPosition = questionPosition - gapCount  // 5-4=1, 6-4=2
+    const globalPosition = 29 + gapCount + localMcqPosition  // 29+4+1=34, 29+4+2=35
+    handleAnswerChange(globalPosition, letter)
+  }, [handleAnswerChange])
 
   // ── Navigation ──────────────────────────────────────────────────────────────
   const goToNextPart = useCallback(() => {
@@ -140,87 +135,20 @@ export function useReadingMock() {
   // ── Submit ──────────────────────────────────────────────────────────────────
   const handleSubmit = useCallback(async () => {
     const data = examDataRef.current
+    const currentAnswers = answersRef.current
+    
     if (!data || submitting) return
 
     setSubmitting(true)
     timer.stop()
 
     try {
-      const p1Ans = part1AnswersRef.current
-      const p2Mat = part2MatchesRef.current
-      const p3Mat = part3MatchesRef.current
-      const p4Ans = part4AnswersRef.current
-      const p5Gap = part5GapAnswersRef.current
-      const p5Mcq = part5McqAnswersRef.current
-
-      const part1AnswersPayload: Record<string, any> = {}
-      data.reading.part1.questions?.forEach((q) => {
-        part1AnswersPayload[q.global_number.toString()] = {
-          question_id: data.reading.part1.id,
-          position: q.position,
-          answer: (p1Ans[q.position] || "").trim()
-        }
-      })
-
-      const part2AnswersPayload: Record<string, any> = {}
-      // Part 2: p2Mat da key = passageId, value = questionId (alohida Part 2 dagi kabi)
-      data.reading.part2.answers?.forEach((passage) => {
-        const questionId = p2Mat[passage.id]  // Shu passage uchun tanlangan question
-        
-        part2AnswersPayload[passage.global_number.toString()] = {
-          question_id: questionId || null,
-          answer_question_id: passage.id,
-          global_number: passage.global_number
-        }
-      })
-
-      const part3AnswersPayload: Record<string, any> = {}
-      data.reading.part3.questions?.forEach((q) => {
-        part3AnswersPayload[q.global_number.toString()] = {
-          question_id: q.id,
-          answer_question_id: p3Mat[q.id] || null // Send null if not answered
-        }
-      })
-
-      const part4AnswersPayload: Record<string, any> = {}
-      data.reading.part4.questions?.forEach((q) => {
-        part4AnswersPayload[q.global_number.toString()] = {
-          question_id: q.id,
-          answer_id: p4Ans[q.id] || null // Send null if not answered
-        }
-      })
-
-      const part5AnswersPayload: Record<string, any> = {}
-      data.reading.part5.gap_fillings?.forEach((gf) => {
-        gf.positions?.forEach((pos) => {
-          const key = `${gf.id}_${pos.position}`
-          part5AnswersPayload[pos.global_number.toString()] = {
-            gap_filling_id: gf.id,
-            position: pos.position,
-            answer: (p5Gap[key] || "").trim()
-          }
-        })
-      })
-
-      data.reading.part5.mcq_questions?.forEach((q) => {
-        part5AnswersPayload[q.global_number.toString()] = {
-          question_id: q.id,
-          answer_id: p5Mcq[q.id] || null // Send null if not answered
-        }
-      })
-
       const payload = {
-        exam_id: data.exam_id,
-        answers: {
-          part1: part1AnswersPayload,
-          part2: part2AnswersPayload,
-          part3: part3AnswersPayload,
-          part4: part4AnswersPayload,
-          part5: part5AnswersPayload,
-        }
+        resource_ids: data.resource_ids,
+        answers: currentAnswers,  // Simple format: {"1": "answer", "7": "A", ...}
       }
 
-      const res = await evaluateReadingFullMock(payload)
+      const res = await evaluateReadingMock(DEFAULT_EXAM_ID, payload)
       setResult(res)
     } catch (err: any) {
       setError(err?.message || "Submission failed")
@@ -234,32 +162,19 @@ export function useReadingMock() {
     setResult(null)
     setError(null)
     setCurrentPart(1)
-    setPart1Answers({})
-    setPart2Matches({})
-    setPart3Matches({})
-    setPart4Answers({})
-    setPart5GapAnswers({})
-    setPart5McqAnswers({})
+    setAnswers({})
     setLoading(true)
 
-    getReadingFullMockQuestions()
+    getReadingMockQuestion(DEFAULT_EXAM_ID)
       .then((data) => {
         setExamData(data)
-        const p1Init: Record<number, string> = {}
-        if (data.reading.part1.questions) {
-          data.reading.part1.questions.forEach((q) => { p1Init[q.position] = "" })
+        
+        // Initialize empty answers for all 35 positions
+        const initialAnswers: Record<string, string> = {}
+        for (let i = 1; i <= 35; i++) {
+          initialAnswers[i.toString()] = ""
         }
-        setPart1Answers(p1Init)
-
-        const p5Init: Record<string, string> = {}
-        if (data.reading.part5.gap_fillings) {
-          data.reading.part5.gap_fillings.forEach((gf: any) => {
-            gf.positions.forEach((pos: any) => {
-              p5Init[`${gf.id}_${pos.position}`] = ""
-            })
-          })
-        }
-        setPart5GapAnswers(p5Init)
+        setAnswers(initialAnswers)
 
         timer.reset()
         setLoading(false)
@@ -271,15 +186,30 @@ export function useReadingMock() {
   }, [timer])
 
   // ── Computed ────────────────────────────────────────────────────────────────
-  const part1Filled = Object.values(part1Answers).every((a) => a.trim().length > 0)
-  const part2Filled = examData ? Object.keys(part2Matches).length >= (examData.reading.part2.answers?.length || 0) : false  // 8 ta passage uchun
-  const part3Filled = examData ? Object.keys(part3Matches).length >= (examData.reading.part3.questions?.length || 0) : false
-  const part4Filled = examData ? Object.keys(part4Answers).length >= (examData.reading.part4.questions?.length || 0) : false
-  const part5GapFilled = Object.values(part5GapAnswers).every((a) => a.trim().length > 0)
-  const part5McqFilled = examData
-    ? Object.keys(part5McqAnswers).length >= (examData.reading.part5.mcq_questions?.length || 0)
-    : false
-  const part5Filled = part5GapFilled && part5McqFilled
+  // Part 1: positions 1-6
+  const part1Filled = [1, 2, 3, 4, 5, 6].every(pos => 
+    answers[pos.toString()]?.trim().length > 0
+  )
+
+  // Part 2: positions 7-14
+  const part2Filled = [7, 8, 9, 10, 11, 12, 13, 14].every(pos => 
+    answers[pos.toString()]?.trim().length > 0
+  )
+
+  // Part 3: positions 15-20
+  const part3Filled = [15, 16, 17, 18, 19, 20].every(pos => 
+    answers[pos.toString()]?.trim().length > 0
+  )
+
+  // Part 4: positions 21-29
+  const part4Filled = [21, 22, 23, 24, 25, 26, 27, 28, 29].every(pos => 
+    answers[pos.toString()]?.trim().length > 0
+  )
+
+  // Part 5: positions 30-35
+  const part5Filled = [30, 31, 32, 33, 34, 35].every(pos => 
+    answers[pos.toString()]?.trim().length > 0
+  )
 
   const partCompletions = {
     1: part1Filled,
@@ -292,15 +222,55 @@ export function useReadingMock() {
   const allFilled = part1Filled && part2Filled && part3Filled && part4Filled && part5Filled
 
   // ── Stats ───────────────────────────────────────────────────────────────────
-  let totalQuestionsCount = 35 // Hardcoded 35 for Full Mock
+  const totalQuestionsCount = 35
 
-  const answeredCount =
-    Object.values(part1Answers).filter((a) => a.trim().length > 0).length +
-    Object.keys(part2Matches).length +
-    Object.keys(part3Matches).length +
-    Object.keys(part4Answers).length +
-    Object.values(part5GapAnswers).filter((a) => a.trim().length > 0).length +
-    Object.keys(part5McqAnswers).length
+  const answeredCount = Object.values(answers).filter(a => a.trim().length > 0).length
+
+  // ── Convert global answers to part-specific format for UI ──────────────────
+  // Part 1: positions 1-6
+  const part1Answers: Record<number, string> = {}
+  for (let i = 1; i <= 6; i++) {
+    part1Answers[i] = answers[i.toString()] || ""
+  }
+
+  // Part 2: positions 7-14 (passage position -> letter)
+  const part2Matches: Record<number, string> = {}
+  for (let i = 1; i <= 8; i++) {
+    const globalPos = 6 + i
+    const letter = answers[globalPos.toString()] || ""
+    if (letter) part2Matches[i] = letter
+  }
+
+  // Part 3: positions 15-20 (paragraph position -> letter)
+  const part3Matches: Record<number, string> = {}
+  for (let i = 1; i <= 6; i++) {
+    const globalPos = 14 + i
+    const letter = answers[globalPos.toString()] || ""
+    if (letter) part3Matches[i] = letter
+  }
+
+  // Part 4: positions 21-29 (question position -> letter)
+  const part4Answers: Record<number, string> = {}
+  for (let i = 1; i <= 9; i++) {
+    const globalPos = 20 + i
+    part4Answers[i] = answers[globalPos.toString()] || ""
+  }
+
+  // Part 5 gap: positions 30-33
+  const part5GapAnswers: Record<number, string> = {}
+  for (let i = 1; i <= 4; i++) {
+    const globalPos = 29 + i
+    part5GapAnswers[i] = answers[globalPos.toString()] || ""
+  }
+
+  // Part 5 MCQ: positions 34-35
+  const part5McqAnswers: Record<number, string> = {}
+  const gapCount = examData?.part5.gap_positions.length || 4
+  for (let i = 1; i <= 2; i++) {
+    const globalPos = 29 + gapCount + i  // 29+4+1=34, 29+4+2=35
+    const mcqPosition = gapCount + i  // 5, 6 (backend position)
+    part5McqAnswers[mcqPosition] = answers[globalPos.toString()] || ""
+  }
 
   return {
     // State
@@ -311,7 +281,7 @@ export function useReadingMock() {
     result,
     currentPart,
 
-    // Answers
+    // Answers (part-specific format for UI compatibility)
     part1Answers,
     part2Matches,
     part3Matches,

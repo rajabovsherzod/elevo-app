@@ -10,38 +10,43 @@ import {
 import { useExamTimer, useExamLoader, useExamSubmit } from "@/hooks/shared"
 
 const TIMER_DURATION = 10 * 60 // 10 minutes
+const EXAM_ID = 1 // Default exam ID
 
 export function useReadingPart2() {
   const [questionData, setQuestionData] = useState<ReadingPart2QuestionResponse | null>(null)
-  const [matches, setMatches] = useState<Record<number, number>>({})
+  const [answers, setAnswers] = useState<Record<string, string>>({}) // {"1": "A", "2": "B", ...}
 
   const questionDataRef = useRef<ReadingPart2QuestionResponse | null>(null)
-  const matchesRef = useRef<Record<number, number>>({})
+  const answersRef = useRef<Record<string, string>>({})
 
   useEffect(() => { questionDataRef.current = questionData }, [questionData])
-  useEffect(() => { matchesRef.current = matches }, [matches])
+  useEffect(() => { answersRef.current = answers }, [answers])
 
   // ✅ Shared Loader Hook (must be first)
   const loader = useExamLoader({
-    loadFn: getReadingPart2Question,
+    loadFn: () => getReadingPart2Question(EXAM_ID),
     validateFn: (data) => {
-      if (!data?.set) {
-        throw new Error('Invalid question data: missing set')
+      if (!data?.set_id || !data?.passages || !data?.headings) {
+        throw new Error('Invalid question data: missing required fields')
       }
     },
     onSuccess: (data) => {
       setQuestionData(data)
-      setMatches({})
+      setAnswers({})
       timer.reset()
     },
   })
 
   // ✅ Shared Submit Hook
   const submitter = useExamSubmit<
-    { exam_id: number; matches: Array<{ question_id: number; answer_question_id: number }> },
+    { answers: Record<string, string> },
     ReadingPart2EvaluateResponse
   >({
-    submitFn: evaluateReadingPart2,
+    submitFn: (payload) => {
+      const qd = questionDataRef.current
+      if (!qd) throw new Error('No question data')
+      return evaluateReadingPart2(qd.exam_id, qd.set_id, payload)
+    },
     onSuccess: () => {
       timer.stop()
     },
@@ -58,35 +63,28 @@ export function useReadingPart2() {
     loader.load()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSelect = useCallback((passageId: number, questionId: number) => {
-    setMatches((prev) => {
-      if (prev[passageId] === questionId) return prev
-      return { ...prev, [passageId]: questionId }
+  const handleSelect = useCallback((position: number, letter: string) => {
+    setAnswers((prev) => {
+      const positionStr = position.toString()
+      if (prev[positionStr] === letter) return prev
+      return { ...prev, [positionStr]: letter }
     })
   }, [])
 
   const handleSubmit = useCallback(async () => {
-    const qd = questionDataRef.current
-    const m = matchesRef.current
-    if (!qd) return
-
-    const matchesArray = Object.entries(m).map(([passageId, questionId]) => ({
-      question_id: questionId,
-      answer_question_id: parseInt(passageId),
-    }))
-
-    await submitter.submit({ exam_id: qd.exam_id, matches: matchesArray })
+    const ans = answersRef.current
+    await submitter.submit({ answers: ans })
   }, [submitter.submit])
 
-  const passages = questionData?.set.answers ?? []
-  const allMatched = passages.length > 0 && passages.every((p) => matches[p.id] !== undefined)
+  const passages = questionData?.passages ?? []
+  const allMatched = passages.length > 0 && passages.every((p) => answers[p.position.toString()] !== undefined)
 
   return {
     loading: loader.loading,
     error: loader.error,
     retry: loader.retry,
     questionData,
-    matches,
+    answers,
     handleSelect,
     submitting: submitter.submitting,
     result: submitter.result,

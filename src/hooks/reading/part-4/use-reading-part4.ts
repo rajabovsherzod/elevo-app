@@ -13,20 +13,22 @@ const TIMER_DURATION = 15 * 60 // 15 minutes
 
 export function useReadingPart4() {
   const [questionData, setQuestionData] = useState<ReadingPart4QuestionResponse | null>(null)
-  const [answers, setAnswers] = useState<Record<number, number>>({})
+  const [answers, setAnswers] = useState<Record<string, string>>({}) // {"1": "A", "2": "B", ...}
 
   const questionDataRef = useRef<ReadingPart4QuestionResponse | null>(null)
-  const answersRef = useRef<Record<number, number>>({})
+  const answersRef = useRef<Record<string, string>>({})
 
   useEffect(() => { questionDataRef.current = questionData }, [questionData])
   useEffect(() => { answersRef.current = answers }, [answers])
 
   // ✅ Shared Loader Hook (must be first)
+  const examId = parseInt(process.env.NEXT_PUBLIC_DEFAULT_EXAM_ID || '1')
+  
   const loader = useExamLoader({
-    loadFn: getReadingPart4Question,
+    loadFn: () => getReadingPart4Question(examId),
     validateFn: (data) => {
-      if (!data?.text) {
-        throw new Error('Invalid question data: missing text')
+      if (!data?.questions || data.questions.length === 0) {
+        throw new Error('Invalid question data: missing questions')
       }
     },
     onSuccess: (data) => {
@@ -38,10 +40,12 @@ export function useReadingPart4() {
 
   // ✅ Shared Submit Hook
   const submitter = useExamSubmit<
-    { exam_id: number; answers: Array<{ question_id: number; answer_id: number }> },
+    { exam_id: number; text_id: number; answers: Record<string, string> },
     ReadingPart4EvaluateResponse
   >({
-    submitFn: evaluateReadingPart4,
+    submitFn: async ({ exam_id, text_id, answers }) => {
+      return evaluateReadingPart4(exam_id, text_id, { answers })
+    },
     onSuccess: () => {
       timer.stop()
     },
@@ -58,25 +62,28 @@ export function useReadingPart4() {
     loader.load()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSelect = useCallback((questionId: number, answerId: number) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: answerId }))
+  const handleSelect = useCallback((position: number, letter: string) => {
+    setAnswers((prev) => {
+      const positionStr = position.toString()
+      if (prev[positionStr] === letter) return prev
+      return { ...prev, [positionStr]: letter }
+    })
   }, [])
 
   const handleSubmit = useCallback(async () => {
     const qd = questionDataRef.current
-    const a = answersRef.current
+    const ans = answersRef.current
     if (!qd) return
 
-    const answersArray = Object.entries(a).map(([questionId, answerId]) => ({
-      question_id: parseInt(questionId),
-      answer_id: answerId,
-    }))
+    await submitter.submit({ 
+      exam_id: qd.exam_id, 
+      text_id: qd.text_id, 
+      answers: ans 
+    })
+  }, [submitter])
 
-    await submitter.submit({ exam_id: qd.exam_id, answers: answersArray })
-  }, [submitter.submit])
-
-  const questions = questionData?.text.questions ?? []
-  const allAnswered = questions.length > 0 && questions.every((q) => answers[q.id] !== undefined)
+  const questions = questionData?.questions ?? []
+  const allAnswered = questions.length > 0 && questions.every((q) => answers[q.position.toString()] !== undefined)
 
   return {
     loading: loader.loading,

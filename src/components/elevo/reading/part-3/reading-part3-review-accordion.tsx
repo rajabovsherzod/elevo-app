@@ -3,23 +3,19 @@
 import { useState, memo, useCallback } from "react"
 import { ChevronDown, ChevronUp } from "@/lib/icons"
 import { AnimatePresence, motion } from "framer-motion"
-import type { ReadingPart3QuestionResponse, ReadingPart3AnswerOption } from "@/lib/api/reading"
+import type { ReadingPart3EvaluateResponse } from "@/lib/api/reading"
 
 interface Props {
-  questionData: ReadingPart3QuestionResponse
-  questions: ReadingPart3AnswerOption[] // paragraphs
-  answers: ReadingPart3AnswerOption[] // headings
+  result: ReadingPart3EvaluateResponse
 }
 
 export const ReadingPart3ReviewAccordion = memo(function ReadingPart3ReviewAccordion({
-  questionData,
-  questions,
-  answers,
+  result,
 }: Props) {
   const [headingsOpen, setHeadingsOpen] = useState(true)
   const [paragraphsOpen, setParagraphsOpen] = useState(false)
 
-  const { set } = questionData
+  const { set } = result
 
   // Stable function references
   const toggleHeadings = useCallback(() => setHeadingsOpen((prev) => !prev), [])
@@ -42,7 +38,7 @@ export const ReadingPart3ReviewAccordion = memo(function ReadingPart3ReviewAccor
             className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container/50 transition-colors"
           >
             <span className="text-sm font-bold text-on-surface">
-              Headings ({answers.length})
+              Headings ({set.headings.length})
             </span>
             {headingsOpen ? (
               <ChevronUp className="w-5 h-5 text-on-surface-variant" />
@@ -61,15 +57,14 @@ export const ReadingPart3ReviewAccordion = memo(function ReadingPart3ReviewAccor
                 className="overflow-hidden"
               >
                 <div className="px-4 pb-4 flex flex-col gap-3">
-                  {answers.map((a, i) => {
-                    const letter = String.fromCharCode(65 + i) // A, B, C...
+                  {set.headings.map((heading) => {
                     return (
-                      <div key={a.id} className="flex items-start gap-3">
-                        <span className="w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 bg-primary/10 text-primary">
-                          {letter}
+                      <div key={heading.letter} className="flex items-start gap-3">
+                        <span className="w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 bg-indigo-500 text-white">
+                          {heading.letter}
                         </span>
                         <p className="text-sm text-on-surface leading-relaxed flex-1">
-                          {a.text}
+                          {heading.text}
                         </p>
                       </div>
                     )
@@ -80,7 +75,7 @@ export const ReadingPart3ReviewAccordion = memo(function ReadingPart3ReviewAccor
           </AnimatePresence>
         </div>
 
-        {/* Paragraphs Section (I-VI) */}
+        {/* Paragraphs Section (1-6) with correct answers */}
         <div>
           <button
             type="button"
@@ -88,7 +83,7 @@ export const ReadingPart3ReviewAccordion = memo(function ReadingPart3ReviewAccor
             className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container/50 transition-colors"
           >
             <span className="text-sm font-bold text-on-surface">
-              Paragraphs ({questions.length})
+              Paragraphs with Correct Answers ({set.paragraphs.length})
             </span>
             {paragraphsOpen ? (
               <ChevronUp className="w-5 h-5 text-on-surface-variant" />
@@ -106,24 +101,29 @@ export const ReadingPart3ReviewAccordion = memo(function ReadingPart3ReviewAccor
                 transition={{ duration: 0.3, ease: "easeInOut" }}
                 className="overflow-hidden"
               >
-                <div className="px-4 pb-4 flex flex-col gap-4">
-                  {set.title && (
-                    <div className="px-3 py-2 rounded-lg bg-primary/5">
-                      <p className="text-xs font-bold text-on-surface">{set.title}</p>
-                    </div>
-                  )}
-                  {questions.map((q, i) => {
-                    const romanNumerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"]
+                <div className="px-4 pb-4 flex flex-col gap-3">
+                  {set.paragraphs.map((paragraph) => {
+                    const result_item = result.results[paragraph.position.toString()]
+                    const correctAnswer = result_item?.correct_answer || "?"
+                    
                     return (
-                      <div key={q.id} className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-black bg-secondary/10 text-on-surface">
-                            {romanNumerals[i]}
+                      <div key={paragraph.position} className="flex flex-col gap-2">
+                        <div className="flex items-start gap-3">
+                          <span className="w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 bg-indigo-500 text-white">
+                            {paragraph.position}
+                          </span>
+                          <p className="text-sm text-on-surface leading-relaxed flex-1">
+                            {paragraph.text}
+                          </p>
+                        </div>
+                        <div className="ml-9 flex items-center gap-2">
+                          <span className="text-xs font-medium text-on-surface-variant">
+                            Correct answer:
+                          </span>
+                          <span className="px-2 py-1 rounded-md bg-green-500/10 text-green-600 text-xs font-bold">
+                            {correctAnswer}
                           </span>
                         </div>
-                        <p className="text-sm text-on-surface leading-relaxed whitespace-pre-wrap">
-                          {q.text}
-                        </p>
                       </div>
                     )
                   })}

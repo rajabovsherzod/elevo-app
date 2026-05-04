@@ -1,49 +1,35 @@
 "use client"
 
-import { lazy, Suspense, useMemo } from "react"
+import { useMemo } from "react"
 import { Button } from "@/components/base/buttons/button"
 import { ExamLoading } from "@/components/elevo/shared/exam-loading"
 import { CalculatingResults } from "@/components/elevo/shared/calculating-results"
 import { ErrorCard } from "@/components/elevo/shared/error-card"
 import { ExamTimer } from "@/components/elevo/shared/exam-timer"
 import { useReadingPart5 } from "@/hooks/reading/part-5/use-reading-part5"
-import { ReadingPart5Text } from "./reading-part5-text"
 import { ReadingPart5GapFilling } from "./reading-part5-gap-filling"
 import { ReadingPart5MCQQuestions } from "./reading-part5-mcq-questions"
-
-const ReadingPart5Result = lazy(() =>
-  import("./reading-part5-result").then((mod) => ({
-    default: mod.ReadingPart5Result,
-  }))
-)
-
-const ReadingPart5ReviewAccordion = lazy(() =>
-  import("./reading-part5-review-accordion").then((mod) => ({
-    default: mod.ReadingPart5ReviewAccordion,
-  }))
-)
+import { ReadingPart5Result } from "./reading-part5-result"
+import { ReadingPart5ReviewAccordion } from "./reading-part5-review-accordion"
+import { ReadingPart5MainText } from "./reading-part5-main-text"
 
 export function ReadingPart5Content() {
   const {
     loading,
     submitting,
     questionData,
-    gapAnswers,
-    mcqAnswers,
+    answers,
     result,
     error,
     allAnswered,
     timeLeft,
     formatTime,
-    handleGapChange,
-    handleMcqSelect,
+    handleAnswerChange,
     handleSubmit,
-    gapFillings,
-    mcqQuestions,
     retry,
   } = useReadingPart5()
 
-  const { text } = questionData || {}
+  const { title, instruction, main_text, summary_text, gap_positions, questions } = questionData || {}
 
   // Memoize showTimer to prevent unnecessary re-renders
   const showTimer = useMemo(
@@ -99,28 +85,29 @@ export function ReadingPart5Content() {
 
       {!result ? (
         <>
-          {/* Main Text */}
-          <ReadingPart5Text
-            title={text?.title || ""}
-            instruction={text?.instruction || ""}
-            text={text?.text || ""}
-          />
+          {/* Main Text (Asosiy katta text - o'qish uchun) */}
+          {main_text && (
+            <ReadingPart5MainText
+              title={title || "Reading Text"}
+              text={main_text}
+            />
+          )}
 
-          {/* Gap Filling (Questions 1-4) */}
+          {/* Gap Filling (Questions 1-4) - Summary text bilan */}
           <ReadingPart5GapFilling
-            summaryText={text?.summary_text || ""}
-            gapFillings={gapFillings}
-            answers={gapAnswers}
-            onAnswerChange={handleGapChange}
+            text={summary_text || ""}
+            gapPositions={gap_positions || []}
+            answers={answers}
+            onAnswerChange={handleAnswerChange}
             disabled={!!result || submitting}
           />
 
           {/* MCQ Questions (Questions 5-6) */}
-          {mcqQuestions.length > 0 && (
+          {questions && questions.length > 0 && (
             <ReadingPart5MCQQuestions
-              questions={mcqQuestions}
-              answers={mcqAnswers}
-              onSelect={handleMcqSelect}
+              questions={questions}
+              answers={answers}
+              onSelect={(position, letter) => handleAnswerChange(parseInt(position), letter)}
               disabled={!!result || submitting}
               startNumber={5}
             />
@@ -142,18 +129,8 @@ export function ReadingPart5Content() {
         </>
       ) : (
         <>
-          <Suspense
-            fallback={<div className="elevo-card p-8 animate-pulse">Loading results...</div>}
-          >
-            <ReadingPart5Result result={result} questionData={questionData!} />
-          </Suspense>
-
-          {/* Review Accordion */}
-          <Suspense
-            fallback={<div className="elevo-card p-8 animate-pulse">Loading review...</div>}
-          >
-            <ReadingPart5ReviewAccordion questionData={questionData!} />
-          </Suspense>
+          <ReadingPart5Result result={result} />
+          <ReadingPart5ReviewAccordion questionData={questionData} result={result} />
         </>
       )}
     </div>

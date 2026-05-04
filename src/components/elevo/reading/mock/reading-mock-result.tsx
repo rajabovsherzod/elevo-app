@@ -1,11 +1,100 @@
 "use client"
 
-import { useRef, useEffect } from "react"
-import { Crown, RefreshCw } from "@/lib/icons"
-import type { ReadingFullMockEvaluateResponse } from "@/lib/api/reading-mock"
+import { useRef, useEffect, memo } from "react"
+import { Crown, RefreshCw, CheckCircle2, XCircle } from "@/lib/icons"
+import type { ReadingMockEvaluateResponse } from "@/lib/api/reading"
+
+// ── Answer Review Grid Component ─────────────────────────────────────────────
+const AnswerReviewGrid = memo(function AnswerReviewGrid({
+  result,
+}: {
+  result: ReadingMockEvaluateResponse
+}) {
+  // Backend returns global results (1-35) directly
+  const allAnswers = Object.entries(result.results || {})
+    .map(([position, item]) => ({
+      position: parseInt(position),
+      userAnswer: item.user_answer,
+      correctAnswer: item.correct_answer,
+      isCorrect: item.is_correct,
+    }))
+    .sort((a, b) => a.position - b.position)
+
+  return (
+    <div className="elevo-card elevo-card-border overflow-hidden">
+      <div className="px-4 py-3 bg-primary/10">
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary">
+          Answer Review (1-35)
+        </p>
+      </div>
+      <div className="p-4">
+        {/* Desktop: 3 columns, Mobile: 2 columns */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {allAnswers.map((answer) => {
+            const isCorrect = answer.isCorrect
+
+            return (
+              <div
+                key={answer.position}
+                className="flex flex-col gap-2 p-3 rounded-xl bg-surface-container/50 border border-outline-variant"
+              >
+                {/* Header: Number + Icon */}
+                <div className="flex items-center justify-between">
+                  <span className="w-6 h-6 rounded-lg text-[11px] font-black flex items-center justify-center bg-primary text-white shadow-sm">
+                    {answer.position}
+                  </span>
+                  {isCorrect ? (
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-error" />
+                  )}
+                </div>
+
+                {/* Answer */}
+                {isCorrect ? (
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-[10px] font-semibold uppercase text-on-surface-variant flex-shrink-0">
+                      YA:
+                    </p>
+                    <span className="text-[13px] font-bold text-green-600 truncate">
+                      {answer.userAnswer}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {/* User answer (wrong) */}
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-[10px] font-semibold uppercase text-on-surface-variant flex-shrink-0">
+                        YA:
+                      </p>
+                      <span className="text-[13px] font-bold text-error line-through opacity-70 truncate">
+                        {answer.userAnswer || "—"}
+                      </span>
+                    </div>
+                    {/* Correct answer */}
+                    {answer.correctAnswer && (
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-[10px] font-semibold uppercase text-on-surface-variant flex-shrink-0">
+                          CA:
+                        </p>
+                        <span className="text-[13px] font-bold text-green-600 truncate">
+                          {answer.correctAnswer}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+})
 
 interface Props {
-  result: ReadingFullMockEvaluateResponse
+  result: ReadingMockEvaluateResponse
   onRetry: () => void
 }
 
@@ -33,7 +122,7 @@ const CEFR_BG: Record<string, string> = {
 
 export function ReadingMockResult({ result, onRetry }: Props) {
   const barRef = useRef<HTMLDivElement>(null)
-  const overallPercent = Math.round(result.overall_score_percent)
+  const overallPercent = Math.round(result.overall_score_percent || 0)
   const isGood = overallPercent >= 65
 
   useEffect(() => {
@@ -106,10 +195,10 @@ export function ReadingMockResult({ result, onRetry }: Props) {
         </div>
 
         <div className="p-4 flex flex-col gap-3">
-          {Object.entries(result.parts).map(([key, partResult]) => {
+          {Object.entries(result.part_details || {}).map(([key, partResult]) => {
             if (!partResult) return null
             const meta = PART_NAMES[key] || { label: key, desc: "" }
-            const pct = Math.round(partResult.score_percent)
+            const pct = Math.round(partResult.summary?.score_percent || 0)
             const good = pct >= 65
 
             return (
@@ -129,7 +218,7 @@ export function ReadingMockResult({ result, onRetry }: Props) {
                     {pct}%
                   </p>
                   <p className="text-[10px] text-on-surface-variant">
-                    {partResult.correct_count}/{partResult.total_questions}
+                    {partResult.summary?.correct_count || 0}/{partResult.summary?.total || 0}
                   </p>
                 </div>
 
@@ -145,6 +234,9 @@ export function ReadingMockResult({ result, onRetry }: Props) {
           })}
         </div>
       </div>
+
+      {/* ── Answer Review (1-35) ────────────────────────────────────────────── */}
+      <AnswerReviewGrid result={result} />
 
       {/* ── Actions ─────────────────────────────────────────────────────────── */}
       <div className="flex gap-3">

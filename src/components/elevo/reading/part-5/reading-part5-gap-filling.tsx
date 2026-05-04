@@ -1,6 +1,6 @@
 import { memo, useMemo } from "react"
 import { cx } from "@/utils/cx"
-import type { ReadingPart5EvaluateResponse } from "@/lib/api/reading-part5"
+import type { ReadingPart5EvaluateResponse } from "@/lib/api/reading"
 import { getGapFillingAriaLabel } from "@/lib/utils/a11y"
 
 interface GapInputProps {
@@ -14,9 +14,10 @@ interface GapInputProps {
 }
 
 const GapInput = memo(function GapInput({ position, totalGaps, value, onChange, disabled, result, globalNumber }: GapInputProps) {
-  const detail = result?.details.gap_filling.find((d) => d.position === position)
+  // New API format: result.results is Record<string, ResultDetail>
+  const detail = result?.results?.[position.toString()]
   const checked = !!result
-  const correct = detail?.correct
+  const correct = detail?.is_correct
 
   // ARIA label for accessibility
   const ariaLabel = getGapFillingAriaLabel(position, totalGaps)
@@ -61,9 +62,9 @@ const GapInput = memo(function GapInput({ position, totalGaps, value, onChange, 
 })
 
 interface ReadingPart5GapFillingProps {
-  summaryText: string
-  gapFillings: { position: number; globalNumber?: number }[]
-  answers: Record<number, string>
+  text: string  // Text with __1__, __2__, _3_, _4_ patterns
+  gapPositions: number[]  // [1, 2, 3, 4]
+  answers: Record<string, string>  // {"1": "text", "2": "text"}
   onAnswerChange: (pos: number, val: string) => void
   disabled: boolean
   result?: ReadingPart5EvaluateResponse | null
@@ -71,22 +72,21 @@ interface ReadingPart5GapFillingProps {
 }
 
 export const ReadingPart5GapFilling = memo(function ReadingPart5GapFilling({
-  summaryText,
-  gapFillings,
+  text,
+  gapPositions,
   answers,
   onAnswerChange,
   disabled,
   result,
   startNumber = 1,
 }: ReadingPart5GapFillingProps) {
-  // Hook returns flattened format: [{position: 1}, {position: 2}, ...]
-  const positions = gapFillings.map((g: any) => g.position)
-  const posSet = new Set(positions)
+  const posSet = new Set(gapPositions)
   
-  // Replace _N_ patterns with input placeholders
-  const processed = summaryText.replace(/_{1,}(\d+)_{1,}/g, (_, num) => {
+  // Replace both __N__ and _N_ patterns with input placeholders
+  // Supports: __1__, _1_, __10__, _10_, etc.
+  const processed = text.replace(/_{1,}(\d+)_{1,}/g, (_, num) => {
     const pos = parseInt(num)
-    return posSet.has(pos) ? `§§${pos}§§` : `_${num}_`
+    return posSet.has(pos) ? `§§${pos}§§` : `__${num}__`  // Keep original if not a gap
   })
 
   const segments = useMemo(
@@ -98,7 +98,7 @@ export const ReadingPart5GapFilling = memo(function ReadingPart5GapFilling({
     <div className="elevo-card overflow-hidden">
       <div className="px-4 py-3 bg-primary/10">
         <p className="text-[10px] font-black uppercase tracking-widest text-primary">
-          For questions {startNumber}-{startNumber + positions.length - 1}, fill the missing information in the numbered spaces
+          For questions {startNumber}-{startNumber + gapPositions.length - 1}, fill the missing information in the numbered spaces
         </p>
       </div>
 
@@ -112,16 +112,14 @@ export const ReadingPart5GapFilling = memo(function ReadingPart5GapFilling({
             const match = seg.match(/§§(\d+)§§/)
             if (match) {
               const pos = parseInt(match[1])
-              // Find the gap filling item with this position to get globalNumber
-              const gapItem = gapFillings.find(g => g.position === pos)
-              const globalNumber = gapItem?.globalNumber ?? (startNumber + positions.indexOf(pos))
+              const globalNumber = startNumber + gapPositions.indexOf(pos)
               
               return (
                 <GapInput
                   key={`gap-${pos}`}
                   position={pos}
-                  totalGaps={positions.length}
-                  value={answers[pos] ?? ""}
+                  totalGaps={gapPositions.length}
+                  value={answers[pos.toString()] ?? ""}
                   onChange={onAnswerChange}
                   disabled={disabled}
                   result={result}

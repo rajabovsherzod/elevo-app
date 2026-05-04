@@ -27,7 +27,7 @@ export function ReadingPart3Content() {
     loading,
     submitting,
     questionData,
-    matches,
+    answers,
     result,
     error,
     allMatched,
@@ -37,8 +37,6 @@ export function ReadingPart3Content() {
     handleSubmit,
     retry,
   } = useReadingPart3()
-
-  const { set } = questionData || {}
 
   // Memoize showTimer to prevent unnecessary re-renders
   const showTimer = useMemo(
@@ -93,10 +91,10 @@ export function ReadingPart3Content() {
       )}
 
       {/* Title */}
-      {set?.title && (
+      {questionData.title && (
         <div className="elevo-card px-4 py-3 bg-primary/5 border-l-4 border-primary">
           <p className="text-xs font-bold text-on-surface leading-relaxed">
-            {set.title}
+            {questionData.title}
           </p>
         </div>
       )}
@@ -104,22 +102,22 @@ export function ReadingPart3Content() {
       {!result ? (
         <>
           {/* Instruction */}
-          {set?.instruction && (
+          {questionData.instruction && (
             <div className="elevo-card px-4 py-3 bg-surface-container-low border-l-4 border-primary">
               <p className="text-xs font-medium text-on-surface leading-relaxed">
-                {set.instruction}
+                {questionData.instruction}
               </p>
             </div>
           )}
 
           {/* Headings (A-H) - TEPADA, faqat matn */}
-          <ReadingPart3Headings headings={set?.answers || []} disabled={!!result || submitting} />
+          <ReadingPart3Headings headings={questionData.headings} disabled={!!result || submitting} />
 
-          {/* Paragraphs (I-VI) - PASTDA, match buttons SHU YERDA */}
+          {/* Paragraphs (1-6) - PASTDA, match buttons SHU YERDA */}
           <ReadingPart3Paragraphs
-            paragraphs={set?.questions || []}
-            headings={set?.answers || []}
-            matches={matches}
+            paragraphs={questionData.paragraphs}
+            headings={questionData.headings}
+            answers={answers}
             onSelect={handleSelect}
             disabled={!!result || submitting}
           />
@@ -140,28 +138,10 @@ export function ReadingPart3Content() {
         </>
       ) : (
         <>
-          <Suspense
-            fallback={<div className="elevo-card p-8 animate-pulse">Loading results...</div>}
-          >
-            <ReadingPart3Result
-              result={result}
-              questions={set?.questions || []}
-              answers={set?.answers || []}
-            />
-          </Suspense>
+          <ReadingPart3Result result={result} />
 
           {/* Review Accordion */}
-          {questionData && (
-            <Suspense
-              fallback={<div className="elevo-card p-8 animate-pulse">Loading review...</div>}
-            >
-              <ReadingPart3ReviewAccordion
-                questionData={questionData}
-                questions={set?.questions || []}
-                answers={set?.answers || []}
-              />
-            </Suspense>
-          )}
+          <ReadingPart3ReviewAccordion result={result} />
         </>
       )}
     </div>

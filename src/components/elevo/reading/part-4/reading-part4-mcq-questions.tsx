@@ -1,12 +1,12 @@
 import { memo } from "react"
 import { cx } from "@/utils/cx"
-import type { ReadingPart4QuestionItem } from "@/lib/api/reading"
-import { getQuestionAriaLabel, getAnswerAriaLabel } from "@/lib/utils/a11y"
+import type { ReadingPart4Question } from "@/lib/api/reading"
+import { getAnswerAriaLabel } from "@/lib/utils/a11y"
 
 interface ReadingPart4McqQuestionsProps {
-  questions: ReadingPart4QuestionItem[]
-  answers: Record<number, number>  // question_id -> answer_id
-  onSelect: (questionId: number, answerId: number) => void
+  questions: ReadingPart4Question[]
+  answers: Record<number, string>  // position -> letter
+  onSelect: (position: number, letter: string) => void
   disabled: boolean
   startNumber?: number  // For full mock: start numbering from this number
 }
@@ -31,16 +31,16 @@ export const ReadingPart4McqQuestions = memo(function ReadingPart4McqQuestions({
         role="region"
         aria-label="Multiple choice questions"
       >
-        {questions.map((q, qi) => {
-          const questionNumber = startNumber + qi
-          const selectedAnswerId = answers[q.id]
+        {questions.map((q, index) => {
+          const displayNumber = startNumber + index
+          const selectedLetter = answers[q.position]
 
           return (
             <div 
-              key={q.id} 
+              key={q.position} 
               className="flex flex-col gap-3"
               role="group"
-              aria-labelledby={`question-${q.id}-text`}
+              aria-labelledby={`question-${q.position}-text`}
             >
               {/* Question */}
               <div className="flex items-start gap-3">
@@ -48,10 +48,10 @@ export const ReadingPart4McqQuestions = memo(function ReadingPart4McqQuestions({
                   className="w-7 h-7 rounded-lg text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 bg-primary text-white shadow-sm"
                   aria-hidden="true"
                 >
-                  {questionNumber}
+                  {displayNumber}
                 </span>
                 <p 
-                  id={`question-${q.id}-text`}
+                  id={`question-${q.position}-text`}
                   className="text-sm font-semibold text-on-surface leading-relaxed flex-1"
                 >
                   {q.question}
@@ -62,23 +62,22 @@ export const ReadingPart4McqQuestions = memo(function ReadingPart4McqQuestions({
               <div 
                 className="grid grid-cols-1 gap-2 pl-10"
                 role="radiogroup"
-                aria-labelledby={`question-${q.id}-text`}
+                aria-labelledby={`question-${q.position}-text`}
                 aria-required="true"
               >
-                {q.answers.map((answer, ai) => {
-                  const letter = String.fromCharCode(65 + ai)  // A, B, C, D
-                  const isSelected = selectedAnswerId === answer.id
-                  const ariaLabel = getAnswerAriaLabel(letter, answer.answer, isSelected)
+                {q.answers.map((answer) => {
+                  const isSelected = selectedLetter === answer.letter
+                  const ariaLabel = getAnswerAriaLabel(answer.letter, answer.text, isSelected)
 
                   return (
                     <button
-                      key={answer.id}
+                      key={answer.letter}
                       type="button"
                       role="radio"
                       aria-checked={isSelected}
                       aria-label={ariaLabel}
                       disabled={disabled}
-                      onClick={() => onSelect(q.id, answer.id)}
+                      onClick={() => onSelect(q.position, answer.letter)}
                       className={cx(
                         "w-full px-4 py-3 rounded-lg text-sm text-left transition-all duration-200",
                         "flex items-center gap-3",
@@ -97,9 +96,9 @@ export const ReadingPart4McqQuestions = memo(function ReadingPart4McqQuestions({
                       )}
                       aria-hidden="true"
                       >
-                        {letter}
+                        {answer.letter}
                       </span>
-                      <span className="flex-1">{answer.answer}</span>
+                      <span className="flex-1">{answer.text}</span>
                     </button>
                   )
                 })}

@@ -1,6 +1,6 @@
 "use client"
 
-import { lazy, Suspense, useMemo } from "react"
+import { useMemo } from "react"
 import { Button } from "@/components/base/buttons/button"
 import { ExamLoading } from "@/components/elevo/shared/exam-loading"
 import { CalculatingResults } from "@/components/elevo/shared/calculating-results"
@@ -9,25 +9,15 @@ import { ExamTimer } from "@/components/elevo/shared/exam-timer"
 import { useReadingPart2 } from "@/hooks/reading/part-2/use-reading-part2"
 import { ReadingPart2AnswersGrid } from "./reading-part2-answers-grid"
 import { ReadingPart2Questions } from "./reading-part2-questions"
-
-const ReadingPart2Result = lazy(() =>
-  import("./reading-part2-result").then((mod) => ({
-    default: mod.ReadingPart2Result,
-  }))
-)
-
-const ReadingPart2ReviewAccordion = lazy(() =>
-  import("./reading-part2-review-accordion").then((mod) => ({
-    default: mod.ReadingPart2ReviewAccordion,
-  }))
-)
+import { ReadingPart2Result } from "./reading-part2-result"
+import { ReadingPart2ReviewAccordion } from "./reading-part2-review-accordion"
 
 export function ReadingPart2Content() {
   const {
     loading,
     submitting,
     questionData,
-    matches,
+    answers,
     result,
     error,
     allMatched,
@@ -37,8 +27,6 @@ export function ReadingPart2Content() {
     handleSubmit,
     retry,
   } = useReadingPart2()
-
-  const { set } = questionData || {}
 
   // Memoize showTimer to prevent unnecessary re-renders
   const showTimer = useMemo(
@@ -95,40 +83,40 @@ export function ReadingPart2Content() {
       {!result ? (
         <>
           {/* Instruction */}
-          {set?.instruction && (
+          {questionData.instruction && (
             <div className="elevo-card px-4 py-3 bg-surface-container-low border-l-4 border-primary">
               <p className="text-xs font-medium text-on-surface leading-relaxed">
-                {set.instruction}
+                {questionData.instruction}
               </p>
             </div>
           )}
 
-          {/* Questions (A-J) - TEPADA, faqat matn */}
+          {/* Headings (A-J) - TOP section, just text */}
           <ReadingPart2Questions
-            questions={set?.questions || []}
-            answers={set?.answers || []}
-            matches={matches}
+            headings={questionData.headings}
+            passages={questionData.passages}
+            answers={answers}
             onSelect={handleSelect}
             disabled={!!result || submitting}
           />
 
-          {/* Passages (1-8) - PASTDA, radio button'lar SHU YERDA */}
+          {/* Passages (1-8) - BOTTOM section, with radio buttons */}
           <ReadingPart2AnswersGrid
-            answers={set?.answers || []}
-            questions={set?.questions || []}
-            matches={matches}
+            passages={questionData.passages}
+            headings={questionData.headings}
+            answers={answers}
             onSelect={handleSelect}
             disabled={!!result || submitting}
           />
 
-          {/* Submit */}
+          {/* Submit - ALWAYS enabled */}
           <div className="flex justify-end">
             <Button
               size="md"
               color="primary"
               onClick={handleSubmit}
               isLoading={submitting}
-              isDisabled={!allMatched || submitting}
+              isDisabled={submitting}
               showTextWhileLoading
             >
               Submit Answers
@@ -137,27 +125,14 @@ export function ReadingPart2Content() {
         </>
       ) : (
         <>
-          <Suspense
-            fallback={<div className="elevo-card p-8 animate-pulse">Loading results...</div>}
-          >
-            <ReadingPart2Result
-              result={result}
-              questions={set?.questions || []}
-              answers={set?.answers || []}
-            />
-          </Suspense>
+          <ReadingPart2Result result={result} />
 
           {/* Review Accordion */}
-          {questionData && (
-            <Suspense
-              fallback={<div className="elevo-card p-8 animate-pulse">Loading review...</div>}
-            >
-              <ReadingPart2ReviewAccordion
-                questionData={questionData}
-                questions={set?.questions || []}
-                answers={set?.answers || []}
-              />
-            </Suspense>
+          {questionData && result && (
+            <ReadingPart2ReviewAccordion
+              questionData={result.set}
+              results={result.results}
+            />
           )}
         </>
       )}

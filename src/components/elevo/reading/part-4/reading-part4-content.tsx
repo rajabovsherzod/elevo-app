@@ -1,6 +1,6 @@
 "use client"
 
-import { lazy, Suspense, useMemo } from "react"
+import { useMemo } from "react"
 import { Button } from "@/components/base/buttons/button"
 import { ExamLoading } from "@/components/elevo/shared/exam-loading"
 import { CalculatingResults } from "@/components/elevo/shared"
@@ -10,18 +10,8 @@ import { useReadingPart4 } from "@/hooks/reading/part-4/use-reading-part4"
 import { ReadingPart4Text } from "./reading-part4-text"
 import { ReadingPart4McqQuestions } from "./reading-part4-mcq-questions"
 import { ReadingPart4TfngQuestions } from "./reading-part4-tfng-questions"
-
-const ReadingPart4Result = lazy(() =>
-  import("./reading-part4-result").then((mod) => ({
-    default: mod.ReadingPart4Result,
-  }))
-)
-
-const ReadingPart4ReviewAccordion = lazy(() =>
-  import("./reading-part4-review-accordion").then((mod) => ({
-    default: mod.ReadingPart4ReviewAccordion,
-  }))
-)
+import { ReadingPart4Result } from "./reading-part4-result"
+import { ReadingPart4ReviewAccordion } from "./reading-part4-review-accordion"
 
 export function ReadingPart4Content() {
   const {
@@ -39,10 +29,10 @@ export function ReadingPart4Content() {
     retry,
   } = useReadingPart4()
 
-  const { text } = questionData || {}
+  const { text, title, instruction, questions } = questionData || {}
   // Separate MCQ (4 answers) and T/F/NG (3 answers)
-  const mcqQuestions = text?.questions.filter((q) => q.answers.length === 4) || []
-  const tfngQuestions = text?.questions.filter((q) => q.answers.length === 3) || []
+  const mcqQuestions = questions?.filter((q) => q.answers.length === 4) || []
+  const tfngQuestions = questions?.filter((q) => q.answers.length === 3) || []
 
   // Memoize showTimer to prevent unnecessary re-renders
   const showTimer = useMemo(
@@ -100,9 +90,9 @@ export function ReadingPart4Content() {
         <>
           {/* Text with Title & Instruction */}
           <ReadingPart4Text
-            title={text?.title || ""}
-            instruction={text?.instruction || ""}
-            text={text?.text || ""}
+            title={title || ""}
+            instruction={instruction || ""}
+            text={text || ""}
           />
 
           {/* Multiple Choice Questions (4 ta) */}
@@ -142,22 +132,14 @@ export function ReadingPart4Content() {
         </>
       ) : (
         <>
-          <Suspense
-            fallback={<div className="elevo-card p-8 animate-pulse">Loading results...</div>}
-          >
-            <ReadingPart4Result result={result} questions={text?.questions || []} />
-          </Suspense>
+          <ReadingPart4Result result={result} questions={questions || []} />
 
           {/* Review Accordion - Text & Questions */}
           {questionData && (
-            <Suspense
-              fallback={<div className="elevo-card p-8 animate-pulse">Loading review...</div>}
-            >
-              <ReadingPart4ReviewAccordion
-                questionData={questionData}
-                questions={text?.questions || []}
-              />
-            </Suspense>
+            <ReadingPart4ReviewAccordion
+              questionData={questionData}
+              questions={questions || []}
+            />
           )}
         </>
       )}

@@ -2,21 +2,19 @@ import { memo } from "react"
 import { cx } from "@/utils/cx"
 import { getMatchingAriaLabel } from "@/lib/utils/a11y"
 
-const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
 interface ReadingPart2AnswersGridProps {
-  answers: { id: number; text: string }[]  // 1-8 (passages)
-  questions: { id: number; text: string }[]  // A-J (questions)
-  matches: Record<number, number>  // passage_id -> question_id
-  onSelect: (passageId: number, questionId: number) => void
+  passages: { position: number; text: string }[]  // 1-8 (passages)
+  headings: { letter: string; text: string }[]  // A-J (headings)
+  answers: Record<string, string>  // {"1": "A", "2": "B", ...}
+  onSelect: (position: number, letter: string) => void
   disabled: boolean
   startNumber?: number  // For full mock: start numbering from this number
 }
 
 export const ReadingPart2AnswersGrid = memo(function ReadingPart2AnswersGrid({ 
-  answers, 
-  questions,
-  matches,
+  passages, 
+  headings,
+  answers,
   onSelect,
   disabled,
   startNumber = 1
@@ -25,33 +23,29 @@ export const ReadingPart2AnswersGrid = memo(function ReadingPart2AnswersGrid({
     <div className="elevo-card overflow-hidden">
       <div className="px-4 py-3 bg-primary/10">
         <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-primary">
-          Match Passages to Questions
+          Match Passages to Headings
         </p>
       </div>
 
       <div 
         className="flex flex-col gap-3 p-3"
         role="region"
-        aria-label="Match passages to questions"
+        aria-label="Match passages to headings"
       >
-        {answers.map((passage, pi) => {
-          const passageNumber = startNumber + pi  // startNumber, startNumber+1, etc.
-          const selectedQuestionId = matches[passage.id]
-          const selectedQuestion = questions.find(q => q.id === selectedQuestionId)
-          const selectedLetter = selectedQuestion 
-            ? LETTERS[questions.indexOf(selectedQuestion)] 
-            : null
+        {passages.map((passage) => {
+          const passageNumber = startNumber + passage.position - 1  // Global numbering
+          const selectedLetter = answers[passage.position.toString()]
 
           // ARIA label for matching status
           const matchingAriaLabel = getMatchingAriaLabel(
             `Passage ${passageNumber}`,
-            selectedLetter ? `Question ${selectedLetter}` : null,
-            !!selectedQuestionId
+            selectedLetter ? `Heading ${selectedLetter}` : null,
+            !!selectedLetter
           )
 
           return (
             <div
-              key={passage.id}
+              key={passage.position}
               className="px-4 py-4 rounded-xl bg-surface-container-lowest flex flex-col gap-3"
               role="group"
               aria-label={matchingAriaLabel}
@@ -67,25 +61,24 @@ export const ReadingPart2AnswersGrid = memo(function ReadingPart2AnswersGrid({
                 <p className="text-sm text-on-surface leading-relaxed flex-1">{passage.text}</p>
               </div>
 
-              {/* Question letter buttons - 2x5 grid (mobile & desktop) */}
+              {/* Heading letter buttons - 2x5 grid (mobile & desktop) */}
               <div 
                 className="grid grid-cols-5 gap-1.5 pl-10"
                 role="radiogroup"
-                aria-label={`Select question for passage ${passageNumber}`}
+                aria-label={`Select heading for passage ${passageNumber}`}
               >
-                {questions.map((q, qi) => {
-                  const letter = LETTERS[qi] ?? String(qi + 1)  // A, B, C... J
-                  const isSelected = selectedQuestionId === q.id
+                {headings.map((heading) => {
+                  const isSelected = selectedLetter === heading.letter
 
                   return (
                     <button
-                      key={q.id}
+                      key={heading.letter}
                       type="button"
                       role="radio"
                       aria-checked={isSelected}
-                      aria-label={`Question ${letter}`}
+                      aria-label={`Heading ${heading.letter}`}
                       disabled={disabled}
-                      onClick={() => onSelect(passage.id, q.id)}
+                      onClick={() => onSelect(passage.position, heading.letter)}
                       className={cx(
                         "h-9 rounded-lg text-[12px] font-black transition-all duration-200",
                         "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
@@ -95,7 +88,7 @@ export const ReadingPart2AnswersGrid = memo(function ReadingPart2AnswersGrid({
                           : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:scale-105 active:scale-95",
                       )}
                     >
-                      {letter}
+                      {heading.letter}
                     </button>
                   )
                 })}

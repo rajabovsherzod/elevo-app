@@ -37,8 +37,6 @@ export function ReadingPart1Content() {
     retry,
   } = useReadingPart1()
 
-  const { question } = questionData || {}
-
   // Memoize showTimer to prevent unnecessary re-renders
   const showTimer = useMemo(
     () => !loading && !error && !submitting && !result,
@@ -93,11 +91,11 @@ export function ReadingPart1Content() {
 
       {/* Passage card */}
       <div className="elevo-card elevo-card-border p-5 flex flex-col gap-4">
-        {question?.title && (
-          <h2 className="text-sm font-bold text-on-surface">{question.title}</h2>
+        {questionData?.title && (
+          <h2 className="text-sm font-bold text-on-surface">{questionData.title}</h2>
         )}
-        {question?.instruction && (
-          <p className="text-xs text-on-surface-variant">{question.instruction}</p>
+        {questionData?.instruction && (
+          <p className="text-xs text-on-surface-variant">{questionData.instruction}</p>
         )}
 
         {/* Text with inline inputs */}
@@ -106,8 +104,8 @@ export function ReadingPart1Content() {
           style={{ background: "color-mix(in srgb, currentColor 3%, transparent)" }}
         >
           <ReadingPart1Text
-            text={question?.text || ""}
-            positions={question?.positions || []}
+            text={questionData?.text || ""}
+            positions={questionData?.positions || []}
             answers={answers}
             onAnswerChange={handleAnswerChange}
             result={result}
@@ -142,7 +140,7 @@ export function ReadingPart1Content() {
             <Suspense
               fallback={<div className="elevo-card p-8 animate-pulse">Loading review...</div>}
             >
-              <ReadingPart1ReviewAccordion questionData={questionData} />
+              <ReadingPart1ReviewAccordion questionData={questionData} result={result} />
             </Suspense>
           )}
         </>

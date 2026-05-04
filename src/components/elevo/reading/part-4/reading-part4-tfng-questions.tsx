@@ -1,13 +1,13 @@
 import { memo } from "react"
 import { cx } from "@/utils/cx"
-import type { ReadingPart4QuestionItem } from "@/lib/api/reading"
+import type { ReadingPart4Question } from "@/lib/api/reading"
 
 interface ReadingPart4TfngQuestionsProps {
-  questions: ReadingPart4QuestionItem[]
-  answers: Record<number, number>  // question_id -> answer_id
-  onSelect: (questionId: number, answerId: number) => void
+  questions: ReadingPart4Question[]
+  answers: Record<number, string>  // position -> letter
+  onSelect: (position: number, letter: string) => void
   disabled: boolean
-  startNumber: number  // MCQ tugagan raqamdan boshlanadi (5)
+  startNumber: number  // For full mock: global numbering
 }
 
 export const ReadingPart4TfngQuestions = memo(function ReadingPart4TfngQuestions({
@@ -17,12 +17,6 @@ export const ReadingPart4TfngQuestions = memo(function ReadingPart4TfngQuestions
   disabled,
   startNumber,
 }: ReadingPart4TfngQuestionsProps) {
-  const tfngConfig = {
-    "True": { short: "T", color: "bg-green-500", hoverColor: "hover:bg-green-500/20" },
-    "False": { short: "F", color: "bg-red-500", hoverColor: "hover:bg-red-500/20" },
-    "Not Given": { short: "NG", color: "bg-orange-500", hoverColor: "hover:bg-orange-500/20" },
-  }
-
   return (
     <div className="elevo-card overflow-hidden">
       <div className="px-4 py-3 bg-primary/10">
@@ -32,15 +26,16 @@ export const ReadingPart4TfngQuestions = memo(function ReadingPart4TfngQuestions
       </div>
 
       <div className="flex flex-col gap-4 p-4">
-        {questions.map((q, qi) => {
-          const selectedAnswerId = answers[q.id]
+        {questions.map((q, index) => {
+          const displayNumber = startNumber + index
+          const selectedLetter = answers[q.position]
 
           return (
-            <div key={q.id} className="flex flex-col gap-3">
+            <div key={q.position} className="flex flex-col gap-3">
               {/* Statement */}
               <div className="flex items-start gap-3">
                 <span className="w-7 h-7 rounded-lg text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 bg-primary text-white shadow-sm">
-                  {startNumber + qi}
+                  {displayNumber}
                 </span>
                 <p className="text-sm font-semibold text-on-surface leading-relaxed flex-1">
                   {q.question}
@@ -50,14 +45,14 @@ export const ReadingPart4TfngQuestions = memo(function ReadingPart4TfngQuestions
               {/* T/F/NG Buttons - 3 tasi bir qatorda, to'liq kenglik */}
               <div className="grid grid-cols-3 gap-2 pl-10">
                 {q.answers.map((answer) => {
-                  const isSelected = selectedAnswerId === answer.id
+                  const isSelected = selectedLetter === answer.letter
 
                   return (
                     <button
-                      key={answer.id}
+                      key={answer.letter}
                       type="button"
                       disabled={disabled}
-                      onClick={() => onSelect(q.id, answer.id)}
+                      onClick={() => onSelect(q.position, answer.letter)}
                       className={cx(
                         "w-full h-9 rounded-lg text-[11px] font-black uppercase tracking-wide transition-all duration-200",
                         "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
@@ -67,7 +62,7 @@ export const ReadingPart4TfngQuestions = memo(function ReadingPart4TfngQuestions
                           : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high",
                       )}
                     >
-                      {answer.answer}
+                      {answer.text}
                     </button>
                   )
                 })}

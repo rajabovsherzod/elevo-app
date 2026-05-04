@@ -22,7 +22,7 @@ export default function ReadingPart1Page() {
   return (
     <div className="flex flex-col gap-5 pb-6">
       {/* Header - Always visible immediately (NO TIMER HERE) */}
-      <PageHeaderWithBack title="Part 1.1 — Gap Filling" />
+      <PageHeaderWithBack title="Part 1 — Gap Filling" />
       
       {/* Content - Lazy loaded with key to force remount */}
       <Suspense

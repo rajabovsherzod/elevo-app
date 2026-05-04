@@ -3,48 +3,44 @@
 import { useState, memo, useCallback } from "react"
 import { ChevronDown, ChevronUp } from "@/lib/icons"
 import { AnimatePresence, motion } from "framer-motion"
-import type { ReadingPart2QuestionResponse, ReadingPart2AnswerOption } from "@/lib/api/reading"
+import type { ReadingPart2EvaluateResponse } from "@/lib/api/reading"
 
 interface Props {
-  questionData: ReadingPart2QuestionResponse
-  questions: ReadingPart2AnswerOption[]
-  answers: ReadingPart2AnswerOption[]
+  questionData: ReadingPart2EvaluateResponse['set']
+  results: ReadingPart2EvaluateResponse['results']
 }
 
 export const ReadingPart2ReviewAccordion = memo(function ReadingPart2ReviewAccordion({
   questionData,
-  questions,
-  answers,
+  results,
 }: Props) {
-  const [questionsOpen, setQuestionsOpen] = useState(true)
-  const [answersOpen, setAnswersOpen] = useState(false)
-
-  const { set } = questionData
+  const [headingsOpen, setHeadingsOpen] = useState(true)
+  const [passagesOpen, setPassagesOpen] = useState(false)
 
   // Stable function references
-  const toggleQuestions = useCallback(() => setQuestionsOpen((prev) => !prev), [])
-  const toggleAnswers = useCallback(() => setAnswersOpen((prev) => !prev), [])
+  const toggleHeadings = useCallback(() => setHeadingsOpen((prev) => !prev), [])
+  const togglePassages = useCallback(() => setPassagesOpen((prev) => !prev), [])
 
   return (
     <div className="elevo-card overflow-hidden">
       <div className="px-4 py-3 bg-primary/10">
         <p className="text-[10px] font-black uppercase tracking-widest text-primary">
-          Review: Questions & Passages
+          Review: Headings & Passages
         </p>
       </div>
 
       <div className="flex flex-col">
-        {/* Questions Section (A-J) */}
+        {/* Headings Section (A-J) */}
         <div className="border-b border-surface-container-high">
           <button
             type="button"
-            onClick={toggleQuestions}
+            onClick={toggleHeadings}
             className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container/50 transition-colors"
           >
             <span className="text-sm font-bold text-on-surface">
-              Questions ({questions.length})
+              Headings ({questionData.headings.length})
             </span>
-            {questionsOpen ? (
+            {headingsOpen ? (
               <ChevronUp className="w-5 h-5 text-on-surface-variant" />
             ) : (
               <ChevronDown className="w-5 h-5 text-on-surface-variant" />
@@ -52,7 +48,7 @@ export const ReadingPart2ReviewAccordion = memo(function ReadingPart2ReviewAccor
           </button>
 
           <AnimatePresence>
-            {questionsOpen && (
+            {headingsOpen && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
@@ -61,15 +57,14 @@ export const ReadingPart2ReviewAccordion = memo(function ReadingPart2ReviewAccor
                 className="overflow-hidden"
               >
                 <div className="px-4 pb-4 flex flex-col gap-3">
-                  {questions.map((q, i) => {
-                    const letter = String.fromCharCode(65 + i) // A, B, C...
+                  {questionData.headings.map((heading) => {
                     return (
-                      <div key={q.id} className="flex items-start gap-3">
-                        <span className="w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 bg-primary/10 text-primary">
-                          {letter}
+                      <div key={heading.letter} className="flex items-start gap-3">
+                        <span className="w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 bg-indigo-500 text-white">
+                          {heading.letter}
                         </span>
                         <p className="text-sm text-on-surface leading-relaxed flex-1">
-                          {q.text}
+                          {heading.text}
                         </p>
                       </div>
                     )
@@ -80,17 +75,17 @@ export const ReadingPart2ReviewAccordion = memo(function ReadingPart2ReviewAccor
           </AnimatePresence>
         </div>
 
-        {/* Passages Section (1-8) */}
+        {/* Passages Section (1-8) with correct answers */}
         <div>
           <button
             type="button"
-            onClick={toggleAnswers}
+            onClick={togglePassages}
             className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container/50 transition-colors"
           >
             <span className="text-sm font-bold text-on-surface">
-              Passages ({answers.length})
+              Passages with Correct Answers ({questionData.passages.length})
             </span>
-            {answersOpen ? (
+            {passagesOpen ? (
               <ChevronUp className="w-5 h-5 text-on-surface-variant" />
             ) : (
               <ChevronDown className="w-5 h-5 text-on-surface-variant" />
@@ -98,7 +93,7 @@ export const ReadingPart2ReviewAccordion = memo(function ReadingPart2ReviewAccor
           </button>
 
           <AnimatePresence>
-            {answersOpen && (
+            {passagesOpen && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
@@ -107,16 +102,31 @@ export const ReadingPart2ReviewAccordion = memo(function ReadingPart2ReviewAccor
                 className="overflow-hidden"
               >
                 <div className="px-4 pb-4 flex flex-col gap-3">
-                  {answers.map((a, i) => (
-                    <div key={a.id} className="flex items-start gap-3">
-                      <span className="w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 bg-secondary/10 text-on-surface">
-                        {i + 1}
-                      </span>
-                      <p className="text-sm text-on-surface leading-relaxed flex-1">
-                        {a.text}
-                      </p>
-                    </div>
-                  ))}
+                  {questionData.passages.map((passage) => {
+                    const result = results[passage.position.toString()]
+                    const correctAnswer = result?.correct_answer || "?"
+                    
+                    return (
+                      <div key={passage.position} className="flex flex-col gap-2">
+                        <div className="flex items-start gap-3">
+                          <span className="w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 bg-indigo-500 text-white">
+                            {passage.position}
+                          </span>
+                          <p className="text-sm text-on-surface leading-relaxed flex-1">
+                            {passage.text}
+                          </p>
+                        </div>
+                        <div className="ml-9 flex items-center gap-2">
+                          <span className="text-xs font-medium text-on-surface-variant">
+                            Correct answer:
+                          </span>
+                          <span className="px-2 py-1 rounded-md bg-green-500/10 text-green-600 text-xs font-bold">
+                            {correctAnswer}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </motion.div>
             )}

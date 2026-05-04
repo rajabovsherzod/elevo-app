@@ -2,36 +2,16 @@
 
 import { CheckCircle2, XCircle } from "@/lib/icons"
 import { useRef, useEffect } from "react"
-import type {
-  ReadingPart3EvaluateResponse,
-  ReadingPart3AnswerOption,
-} from "@/lib/api/reading"
-
-const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
-
-function headingLetter(headingId: number | null | undefined, headings: ReadingPart3AnswerOption[]): string {
-  if (headingId == null) return "?"
-  const idx = headings.findIndex((h) => h.id === headingId)
-  return idx >= 0 ? (LETTERS[idx] ?? "?") : "?"
-}
-
-function paragraphRoman(questionId: number | null | undefined, paragraphs: ReadingPart3AnswerOption[]): string {
-  if (questionId == null) return "?"
-  const idx = paragraphs.findIndex((p) => p.id === questionId)
-  return idx >= 0 ? (ROMAN_NUMERALS[idx] ?? "?") : "?"
-}
+import type { ReadingPart3EvaluateResponse } from "@/lib/api/reading"
 
 interface Props {
-  result:    ReadingPart3EvaluateResponse
-  questions: ReadingPart3AnswerOption[]  // paragraphs
-  answers:   ReadingPart3AnswerOption[]  // headings
+  result: ReadingPart3EvaluateResponse
 }
 
-export function ReadingPart3Result({ result, questions, answers }: Props) {
-  const barRef       = useRef<HTMLDivElement>(null)
-  const scorePercent = Math.round(result.score_percent)
-  const isGood       = scorePercent >= 70
+export function ReadingPart3Result({ result }: Props) {
+  const barRef = useRef<HTMLDivElement>(null)
+  const scorePercent = Math.round(result.summary.score_percent)
+  const isGood = scorePercent >= 70
 
   useEffect(() => {
     const el = barRef.current
@@ -41,12 +21,10 @@ export function ReadingPart3Result({ result, questions, answers }: Props) {
     el.getBoundingClientRect()
     el.style.transition = "width 1s cubic-bezier(0.34,1.2,0.64,1)"
     el.style.width = `${scorePercent}%`
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [scorePercent])
 
   return (
     <div className="flex flex-col gap-4 animate-fade-in">
-
       {/* Score card */}
       <div className="elevo-card p-6">
         <div className="flex items-center justify-between mb-4">
@@ -55,7 +33,7 @@ export function ReadingPart3Result({ result, questions, answers }: Props) {
               Your Score
             </p>
             <p className="text-sm font-semibold text-on-surface">
-              {result.correct_count} / {result.total_questions} correct
+              {result.summary.correct_count} / {result.summary.total} correct
             </p>
           </div>
           <span className={`text-4xl font-black tabular-nums ${isGood ? "text-primary" : "text-error"}`}>
@@ -71,7 +49,7 @@ export function ReadingPart3Result({ result, questions, answers }: Props) {
         </div>
       </div>
 
-      {/* Answer review */}
+      {/* Answer cards - horizontal layout like Part 1 & 2 */}
       <div className="elevo-card overflow-hidden">
         <div className="px-4 py-3 bg-primary/10">
           <p className="text-[10px] font-black uppercase tracking-widest text-primary">
@@ -79,61 +57,57 @@ export function ReadingPart3Result({ result, questions, answers }: Props) {
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 p-3">
-          {result.details.map((d, i) => {
-            const paragraph        = questions.find((q) => q.id === d.question_id)
-            const paragraphRomanNum = paragraphRoman(d.question_id, questions)
-            const correctHeadingLetter = headingLetter(d.answer_question_id, answers)
-            
-            // Find what user selected (answer_question_id is the heading they chose)
-            const userSelectedHeadingLetter = headingLetter(d.answer_question_id, answers)
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-3">
+          {Object.entries(result.results).map(([position, detail]) => {
+            const isCorrect = detail.is_correct
 
             return (
               <div
-                key={d.question_id}
-                className={`flex items-start gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 ${
-                  d.correct 
-                    ? "bg-green-500/10" 
-                    : "bg-surface-container-lowest"
+                key={position}
+                className={`flex flex-col gap-2 px-3 py-3 rounded-xl transition-all duration-200 ${
+                  isCorrect ? "bg-green-500/10" : "bg-surface-container-lowest"
                 }`}
               >
-                {/* Paragraph Roman Numeral */}
-                <span className={`w-7 h-7 rounded-lg text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 ${
-                  d.correct
-                    ? "bg-green-500 text-white shadow-sm"
-                    : "bg-surface-container text-on-surface-variant"
-                }`}>
-                  {i + 1}
-                </span>
-
-                <div className="flex-1 min-w-0">
-                  {paragraph && (
-                    <p className="text-xs text-on-surface-variant mb-2 leading-relaxed">{paragraph.text}</p>
-                  )}
-                  {d.correct ? (
-                    <div className="flex items-center gap-2">
-                      <span className="w-8 h-8 rounded-lg bg-green-500 text-white text-[13px] font-black flex items-center justify-center shadow-sm">
-                        {correctHeadingLetter}
-                      </span>
-                      <span className="text-sm font-bold text-green-600">Correct</span>
-                    </div>
+                {/* Position badge */}
+                <div className="flex items-center justify-between">
+                  <span
+                    className={`w-7 h-7 rounded-lg text-[11px] font-black flex items-center justify-center ${
+                      isCorrect
+                        ? "bg-green-500 text-white shadow-sm"
+                        : "bg-surface-container text-on-surface-variant"
+                    }`}
+                  >
+                    {position}
+                  </span>
+                  {isCorrect ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
                   ) : (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="w-8 h-8 rounded-lg bg-error/10 text-error text-[13px] font-black flex items-center justify-center line-through opacity-70">
-                        {userSelectedHeadingLetter}
-                      </span>
-                      <span className="text-on-surface-variant text-xs">→</span>
-                      <span className="w-8 h-8 rounded-lg bg-primary text-white text-[13px] font-black flex items-center justify-center shadow-sm">
-                        {correctHeadingLetter}
-                      </span>
-                    </div>
+                    <XCircle className="w-5 h-5 text-error shrink-0" />
                   )}
                 </div>
 
-                {d.correct
-                  ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-1" />
-                  : <XCircle      className="w-5 h-5 text-error shrink-0 mt-1" />
-                }
+                {/* Answers - horizontal layout */}
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-on-surface-variant font-medium">YA:</span>
+                  <span
+                    className={`px-2 py-1 rounded-md font-bold ${
+                      isCorrect
+                        ? "bg-green-500 text-white"
+                        : "bg-error/10 text-error line-through"
+                    }`}
+                  >
+                    {detail.user_answer || "—"}
+                  </span>
+                </div>
+
+                {!isCorrect && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-on-surface-variant font-medium">CA:</span>
+                    <span className="px-2 py-1 rounded-md font-bold bg-primary text-white">
+                      {detail.correct_answer}
+                    </span>
+                  </div>
+                )}
               </div>
             )
           })}

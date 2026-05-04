@@ -26,22 +26,22 @@ export function useReadingPart1() {
   const loader = useExamLoader({
     loadFn: getReadingPart1Question,
     validateFn: (data) => {
-      if (!data?.question?.text) {
+      if (!data?.text) {
         throw new Error('Invalid question data: missing text')
       }
     },
     onSuccess: (data) => {
       // Fallback: derive positions from text when DB has no answer records
-      if (data.question.positions.length === 0 && data.question.text) {
-        const matches = data.question.text.match(/_{1,}(\d+)_{1,}/g) ?? []
-        data.question.positions = [...new Set(matches.map((m) => parseInt(m.replace(/[^0-9]/g, ""))))]
+      if (data.positions.length === 0 && data.text) {
+        const matches = data.text.match(/_{1,}(\d+)_{1,}/g) ?? []
+        data.positions = [...new Set(matches.map((m) => parseInt(m.replace(/[^0-9]/g, ""))))]
       }
 
       setQuestionData(data)
 
       // Initialize answers
       const init: Record<number, string> = {}
-      data.question.positions.forEach((p) => { init[p] = "" })
+      data.positions.forEach((p) => { init[p] = "" })
       setAnswers(init)
 
       timer.reset()
@@ -50,7 +50,7 @@ export function useReadingPart1() {
 
   // ✅ Shared Submit Hook
   const submitter = useExamSubmit<
-    { exam_id: number; answers: Array<{ question_id: number; position: number; answer: string }> },
+    { exam_id: number; question_id: number; answers: Record<string, string> },
     ReadingPart1EvaluateResponse
   >({
     submitFn: evaluateReadingPart1,
@@ -86,14 +86,18 @@ export function useReadingPart1() {
     const ans = answersRef.current
     if (!qd) return
 
-    const answersArray = Object.entries(ans).map(([pos, val]) => ({
-      question_id: qd.question.id,
-      position: parseInt(pos),
-      answer: val.trim(),
-    }))
+    // Convert to simple format: {"1": "answer", "2": "answer"}
+    const answersRecord: Record<string, string> = {}
+    Object.entries(ans).forEach(([pos, val]) => {
+      answersRecord[pos] = val.trim()
+    })
 
-    await submitter.submit({ exam_id: qd.exam_id, answers: answersArray })
-  }, [submitter.submit])
+    await submitter.submit({ 
+      exam_id: qd.exam_id, 
+      question_id: qd.question_id,
+      answers: answersRecord 
+    })
+  }, [submitter])
 
   // Check if all filled
   const allFilled = Object.values(answers).every((a) => a.trim().length > 0)

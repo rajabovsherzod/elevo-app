@@ -6,50 +6,46 @@ import {
   evaluateReadingPart5,
   type ReadingPart5QuestionResponse,
   type ReadingPart5EvaluateResponse,
-} from "@/lib/api/reading-part5"
+} from "@/lib/api/reading"
 import { useExamTimer, useExamLoader, useExamSubmit } from "@/hooks/shared"
 
 const TIMER_DURATION = 12 * 60 // 12 minutes
 
 export function useReadingPart5() {
   const [questionData, setQuestionData] = useState<ReadingPart5QuestionResponse | null>(null)
-  const [gapAnswers, setGapAnswers] = useState<Record<number, string>>({})
-  const [mcqAnswers, setMcqAnswers] = useState<Record<number, number>>({})
+  const [answers, setAnswers] = useState<Record<string, string>>({}) // {"1": "text", "5": "A"}
 
   const questionDataRef = useRef<ReadingPart5QuestionResponse | null>(null)
-  const gapAnswersRef = useRef<Record<number, string>>({})
-  const mcqAnswersRef = useRef<Record<number, number>>({})
+  const answersRef = useRef<Record<string, string>>({})
 
   useEffect(() => { questionDataRef.current = questionData }, [questionData])
-  useEffect(() => { gapAnswersRef.current = gapAnswers }, [gapAnswers])
-  useEffect(() => { mcqAnswersRef.current = mcqAnswers }, [mcqAnswers])
+  useEffect(() => { answersRef.current = answers }, [answers])
 
   // ✅ Shared Loader Hook (must be first)
+  const examId = parseInt(process.env.NEXT_PUBLIC_DEFAULT_EXAM_ID || '1')
+  
   const loader = useExamLoader({
-    loadFn: getReadingPart5Question,
+    loadFn: () => getReadingPart5Question(examId),
     validateFn: (data) => {
-      if (!data?.text) {
-        throw new Error('Invalid question data: missing text')
+      if (!data?.summary_text || !data?.gap_positions) {
+        throw new Error('Invalid question data: missing summary_text or gap positions')
       }
     },
     onSuccess: (data) => {
       setQuestionData(data)
-      setGapAnswers({})
-      setMcqAnswers({})
+      setAnswers({})
       timer.reset()
     },
   })
 
   // ✅ Shared Submit Hook
   const submitter = useExamSubmit<
-    {
-      exam_id: number
-      gap_answers: Array<{ gap_filling_id: number; position: number; answer: string }>
-      question_answers: Array<{ question_id: number; answer_id: number }>
-    },
+    { exam_id: number; text_id: number; answers: Record<string, string> },
     ReadingPart5EvaluateResponse
   >({
-    submitFn: evaluateReadingPart5,
+    submitFn: async ({ exam_id, text_id, answers }) => {
+      return evaluateReadingPart5(exam_id, text_id, { answers })
+    },
     onSuccess: () => {
       timer.stop()
     },
@@ -66,70 +62,46 @@ export function useReadingPart5() {
     loader.load()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleGapChange = useCallback((position: number, value: string) => {
-    setGapAnswers((prev) => ({ ...prev, [position]: value }))
-  }, [])
-
-  const handleMcqSelect = useCallback((questionId: number, answerId: number) => {
-    setMcqAnswers((prev) => ({ ...prev, [questionId]: answerId }))
+  const handleAnswerChange = useCallback((position: number, value: string) => {
+    setAnswers((prev) => {
+      const positionStr = position.toString()
+      if (prev[positionStr] === value) return prev
+      return { ...prev, [positionStr]: value }
+    })
   }, [])
 
   const handleSubmit = useCallback(async () => {
     const qd = questionDataRef.current
-    const gaps = gapAnswersRef.current
-    const mcqs = mcqAnswersRef.current
+    const ans = answersRef.current
     if (!qd) return
 
-    // Build gap ID map
-    const gapFillings = qd.text.gap_fillings || []
-    const gapIdMap = new Map<number, number>()
-    gapFillings.forEach((gf: any) => {
-      gf.positions.forEach((pos: number) => {
-        gapIdMap.set(pos, gf.id)
-      })
+    await submitter.submit({ 
+      exam_id: qd.exam_id, 
+      text_id: qd.text_id, 
+      answers: ans 
     })
+  }, [submitter])
 
-    const gapAnswersArray = Object.entries(gaps).map(([position, answer]) => ({
-      gap_filling_id: gapIdMap.get(parseInt(position)) || 0,
-      position: parseInt(position),
-      answer: answer,
-    }))
-
-    const mcqAnswersArray = Object.entries(mcqs).map(([questionId, answerId]) => ({
-      question_id: parseInt(questionId),
-      answer_id: answerId,
-    }))
-
-    await submitter.submit({
-      exam_id: qd.exam_id,
-      gap_answers: gapAnswersArray,
-      question_answers: mcqAnswersArray,
-    })
-  }, [submitter.submit])
-
-  const gapFillingsRaw = questionData?.text.gap_fillings ?? []
-  const mcqQuestions = questionData?.text.mcq_questions ?? []
-  const gapFillings = gapFillingsRaw.flatMap((gf: any) =>
-    gf.positions.map((pos: number) => ({ position: pos }))
-  )
-  const allGapAnswered = gapFillings.every((g) => gapAnswers[g.position]?.trim())
-  const allMcqAnswered = mcqQuestions.every((q) => mcqAnswers[q.id] !== undefined)
-  const allAnswered = allGapAnswered && allMcqAnswered
+  // Check if all answers are filled
+  const gapPositions = questionData?.gap_positions ?? []
+  const mcqQuestions = questionData?.questions ?? []
+  const totalQuestions = gapPositions.length + mcqQuestions.length
+  
+  const allAnswered = totalQuestions > 0 && 
+    [...gapPositions, ...mcqQuestions.map(q => q.position)].every(
+      pos => answers[pos.toString()]?.trim()
+    )
 
   return {
     loading: loader.loading,
     error: loader.error,
     retry: loader.retry,
     questionData,
-    gapAnswers,
-    mcqAnswers,
-    handleGapChange,
-    handleMcqSelect,
+    answers,
+    handleAnswerChange,
     submitting: submitter.submitting,
     result: submitter.result,
     handleSubmit,
-    gapFillings,
-    mcqQuestions,
     allAnswered,
     timeLeft: timer.timeLeft,
     formatTime: timer.formatTime,

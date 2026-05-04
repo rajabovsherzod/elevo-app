@@ -1,14 +1,11 @@
 import { memo } from "react"
 import { cx } from "@/utils/cx"
 
-const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
-
 interface ReadingPart3ParagraphsProps {
-  paragraphs: { id: number; text: string }[]  // 1-6 (paragraphs)
-  headings: { id: number; text: string }[]    // A-H (8 ta headings)
-  matches: Record<number, number>  // paragraph_id -> heading_id
-  onSelect: (paragraphId: number, headingId: number) => void
+  paragraphs: { position: number; text: string }[]  // 1-6 (paragraphs)
+  headings: { letter: string; text: string }[]    // A-H (8 ta headings)
+  answers: Record<string, string>  // {"1": "A", "2": "B", ...}
+  onSelect: (position: number, letter: string) => void
   disabled: boolean
   startNumber?: number  // For full mock: start numbering from this number
 }
@@ -16,7 +13,7 @@ interface ReadingPart3ParagraphsProps {
 export const ReadingPart3Paragraphs = memo(function ReadingPart3Paragraphs({
   paragraphs,
   headings,
-  matches,
+  answers,
   onSelect,
   disabled,
   startNumber = 1,
@@ -30,16 +27,16 @@ export const ReadingPart3Paragraphs = memo(function ReadingPart3Paragraphs({
       </div>
 
       <div className="flex flex-col gap-3 p-3">
-        {paragraphs.map((paragraph, pi) => {
-          const paragraphNumber = startNumber + pi  // startNumber, startNumber+1, etc.
-          const selectedHeadingId = matches[paragraph.id]
+        {paragraphs.map((paragraph) => {
+          const paragraphNumber = startNumber + paragraph.position - 1  // Adjust for display
+          const selectedLetter = answers[paragraph.position.toString()]
 
           return (
             <div
-              key={paragraph.id}
+              key={paragraph.position}
               className="px-4 py-4 rounded-xl bg-surface-container-lowest flex flex-col gap-3"
             >
-              {/* Paragraph text with ROMAN NUMERAL (I-VI) */}
+              {/* Paragraph text with NUMBER (1-6) */}
               <div className="flex items-start gap-3">
                 <span className="w-7 h-7 rounded-lg text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 bg-primary text-white shadow-sm">
                   {paragraphNumber}
@@ -49,16 +46,15 @@ export const ReadingPart3Paragraphs = memo(function ReadingPart3Paragraphs({
 
               {/* Heading letter buttons (A-H) - 4 per row, 2 rows */}
               <div className="grid grid-cols-4 gap-1.5 pl-10">
-                {headings.map((heading, hi) => {
-                  const headingLetter = LETTERS[hi] ?? String(hi + 1)  // A, B, C... H
-                  const isSelected = selectedHeadingId === heading.id
+                {headings.map((heading) => {
+                  const isSelected = selectedLetter === heading.letter
 
                   return (
                     <button
-                      key={heading.id}
+                      key={heading.letter}
                       type="button"
                       disabled={disabled}
-                      onClick={() => onSelect(paragraph.id, heading.id)}
+                      onClick={() => onSelect(paragraph.position, heading.letter)}
                       className={cx(
                         "w-full h-10 rounded-lg text-[13px] font-black transition-all duration-200",
                         "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
@@ -68,7 +64,7 @@ export const ReadingPart3Paragraphs = memo(function ReadingPart3Paragraphs({
                           : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:scale-105 active:scale-95",
                       )}
                     >
-                      {headingLetter}
+                      {heading.letter}
                     </button>
                   )
                 })}

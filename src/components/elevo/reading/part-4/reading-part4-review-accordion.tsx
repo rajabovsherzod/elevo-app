@@ -3,22 +3,24 @@
 import { useState, memo, useCallback, useMemo } from "react"
 import { ChevronDown, ChevronUp } from "@/lib/icons"
 import { AnimatePresence, motion } from "framer-motion"
-import type { ReadingPart4QuestionResponse, ReadingPart4QuestionItem } from "@/lib/api/reading"
+import type { ReadingPart4QuestionResponse, ReadingPart4Question } from "@/lib/api/reading"
 
 interface Props {
   questionData: ReadingPart4QuestionResponse
-  questions: ReadingPart4QuestionItem[]
+  questions: ReadingPart4Question[]
+  results?: Record<string, { is_correct: boolean; user_answer: string; correct_answer: string }>
 }
 
 export const ReadingPart4ReviewAccordion = memo(function ReadingPart4ReviewAccordion({ 
   questionData, 
-  questions 
+  questions,
+  results = {}
 }: Props) {
   const [textOpen, setTextOpen] = useState(true)
   const [mcqOpen, setMcqOpen] = useState(false)
   const [tfngOpen, setTfngOpen] = useState(false)
 
-  const { text } = questionData
+  const { text, title, instruction } = questionData
   
   // Memoized calculations - only recalculate when questions change
   const mcqQuestions = useMemo(
@@ -69,14 +71,14 @@ export const ReadingPart4ReviewAccordion = memo(function ReadingPart4ReviewAccor
                 className="overflow-hidden"
               >
                 <div className="px-4 pb-4">
-                  {text.title && (
-                    <h3 className="text-base font-bold text-on-surface mb-2">{text.title}</h3>
+                  {title && (
+                    <h3 className="text-base font-bold text-on-surface mb-2">{title}</h3>
                   )}
-                  {text.instruction && (
-                    <p className="text-xs text-on-surface-variant mb-3 italic">{text.instruction}</p>
+                  {instruction && (
+                    <p className="text-xs text-on-surface-variant mb-3 italic">{instruction}</p>
                   )}
                   <div className="text-sm text-on-surface leading-relaxed whitespace-pre-wrap">
-                    {text.text}
+                    {text}
                   </div>
                 </div>
               </motion.div>
@@ -111,23 +113,38 @@ export const ReadingPart4ReviewAccordion = memo(function ReadingPart4ReviewAccor
                 className="overflow-hidden"
               >
                 <div className="px-4 pb-4 flex flex-col gap-4">
-                  {mcqQuestions.map((q, qi) => (
-                    <div key={q.id} className="flex flex-col gap-2">
-                      <p className="text-sm font-semibold text-on-surface">
-                        <span className="text-primary font-black">{qi + 1}.</span> {q.question}
-                      </p>
-                      <div className="pl-6 flex flex-col gap-1.5">
-                        {q.answers.map((answer, ai) => {
-                          const letter = String.fromCharCode(65 + ai)
-                          return (
-                            <p key={answer.id} className="text-xs text-on-surface-variant">
-                              <span className="font-bold text-on-surface">{letter}.</span> {answer.answer}
-                            </p>
-                          )
-                        })}
+                  {mcqQuestions.map((q) => {
+                    // Get correct answer from results
+                    const correctLetter = results[q.position.toString()]?.correct_answer || ""
+                    
+                    return (
+                      <div key={q.position} className="flex flex-col gap-2">
+                        <div className="flex items-start gap-2">
+                          <span className="w-7 h-7 rounded-lg text-[11px] font-black flex items-center justify-center shrink-0 bg-indigo-500 text-white">
+                            {q.position}
+                          </span>
+                          <p className="text-sm font-semibold text-on-surface flex-1">
+                            {q.question}
+                          </p>
+                        </div>
+                        <div className="pl-9 flex flex-col gap-1.5">
+                          {q.answers.map((answer) => {
+                            const isCorrect = answer.letter === correctLetter
+                            return (
+                              <p key={answer.letter} className="text-xs text-on-surface-variant">
+                                <span className="font-bold text-on-surface">{answer.letter}.</span> {answer.text}
+                                {isCorrect && (
+                                  <span className="ml-2 px-2 py-0.5 rounded-md bg-green-500/10 text-green-600 text-[10px] font-bold">
+                                    Correct
+                                  </span>
+                                )}
+                              </p>
+                            )
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </motion.div>
             )}
@@ -141,13 +158,13 @@ export const ReadingPart4ReviewAccordion = memo(function ReadingPart4ReviewAccor
             onClick={toggleTfng}
             className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container/50 transition-colors"
           >
-            <span className="text-sm font-bold text-on-surface">
-              True / False / Not Given (Questions {mcqQuestions.length + 1}-{mcqQuestions.length + tfngQuestions.length})
+            <span className="text-sm font-bold text-on-surface text-left">
+              True / False / Not Given ({tfngQuestions.length})
             </span>
             {tfngOpen ? (
-              <ChevronUp className="w-5 h-5 text-on-surface-variant" />
+              <ChevronUp className="w-5 h-5 text-on-surface-variant flex-shrink-0" />
             ) : (
-              <ChevronDown className="w-5 h-5 text-on-surface-variant" />
+              <ChevronDown className="w-5 h-5 text-on-surface-variant flex-shrink-0" />
             )}
           </button>
 
@@ -161,14 +178,36 @@ export const ReadingPart4ReviewAccordion = memo(function ReadingPart4ReviewAccor
                 className="overflow-hidden"
               >
                 <div className="px-4 pb-4 flex flex-col gap-3">
-                  {tfngQuestions.map((q, qi) => (
-                    <div key={q.id} className="flex items-start gap-3">
-                      <span className="w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 bg-primary/10 text-primary">
-                        {mcqQuestions.length + 1 + qi}
-                      </span>
-                      <p className="text-sm text-on-surface leading-relaxed flex-1">{q.question}</p>
-                    </div>
-                  ))}
+                  {tfngQuestions.map((q) => {
+                    // Get correct answer from results
+                    const correctLetter = results[q.position.toString()]?.correct_answer || ""
+                    
+                    return (
+                      <div key={q.position} className="flex flex-col gap-2">
+                        <div className="flex items-start gap-2">
+                          <span className="w-7 h-7 rounded-lg text-[11px] font-black flex items-center justify-center shrink-0 bg-indigo-500 text-white">
+                            {q.position}
+                          </span>
+                          <p className="text-sm text-on-surface leading-relaxed flex-1">{q.question}</p>
+                        </div>
+                        <div className="pl-9 flex flex-col gap-1">
+                          {q.answers.map((answer) => {
+                            const isCorrect = answer.letter === correctLetter
+                            return (
+                              <p key={answer.letter} className="text-xs text-on-surface-variant">
+                                <span className="font-bold text-on-surface">{answer.letter}.</span> {answer.text}
+                                {isCorrect && (
+                                  <span className="ml-2 px-2 py-0.5 rounded-md bg-green-500/10 text-green-600 text-[10px] font-bold">
+                                    Correct
+                                  </span>
+                                )}
+                              </p>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </motion.div>
             )}

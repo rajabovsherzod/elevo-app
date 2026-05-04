@@ -13,35 +13,39 @@ const TIMER_DURATION = 10 * 60 // 10 minutes
 
 export function useReadingPart3() {
   const [questionData, setQuestionData] = useState<ReadingPart3QuestionResponse | null>(null)
-  const [matches, setMatches] = useState<Record<number, number>>({})
+  const [answers, setAnswers] = useState<Record<string, string>>({}) // {"1": "A", "2": "B", ...}
 
   const questionDataRef = useRef<ReadingPart3QuestionResponse | null>(null)
-  const matchesRef = useRef<Record<number, number>>({})
+  const answersRef = useRef<Record<string, string>>({})
 
   useEffect(() => { questionDataRef.current = questionData }, [questionData])
-  useEffect(() => { matchesRef.current = matches }, [matches])
+  useEffect(() => { answersRef.current = answers }, [answers])
 
   // ✅ Shared Loader Hook (must be first)
+  const examId = parseInt(process.env.NEXT_PUBLIC_DEFAULT_EXAM_ID || '1')
+  
   const loader = useExamLoader({
-    loadFn: getReadingPart3Question,
+    loadFn: () => getReadingPart3Question(examId),
     validateFn: (data) => {
-      if (!data?.set) {
-        throw new Error('Invalid question data: missing set')
+      if (!data?.paragraphs || !data?.headings) {
+        throw new Error('Invalid question data: missing paragraphs or headings')
       }
     },
     onSuccess: (data) => {
       setQuestionData(data)
-      setMatches({})
+      setAnswers({})
       timer.reset()
     },
   })
 
   // ✅ Shared Submit Hook
   const submitter = useExamSubmit<
-    { exam_id: number; matches: Array<{ question_id: number; answer_question_id: number }> },
+    { exam_id: number; set_id: number; answers: Record<string, string> },
     ReadingPart3EvaluateResponse
   >({
-    submitFn: evaluateReadingPart3,
+    submitFn: async ({ exam_id, set_id, answers }) => {
+      return evaluateReadingPart3(exam_id, set_id, { answers })
+    },
     onSuccess: () => {
       timer.stop()
     },
@@ -58,35 +62,35 @@ export function useReadingPart3() {
     loader.load()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSelect = useCallback((paragraphId: number, headingId: number) => {
-    setMatches((prev) => {
-      if (prev[paragraphId] === headingId) return prev
-      return { ...prev, [paragraphId]: headingId }
+  const handleSelect = useCallback((position: number, letter: string) => {
+    setAnswers((prev) => {
+      const positionStr = position.toString()
+      if (prev[positionStr] === letter) return prev
+      return { ...prev, [positionStr]: letter }
     })
   }, [])
 
   const handleSubmit = useCallback(async () => {
     const qd = questionDataRef.current
-    const m = matchesRef.current
+    const ans = answersRef.current
     if (!qd) return
 
-    const matchesArray = Object.entries(m).map(([paragraphId, headingId]) => ({
-      question_id: parseInt(paragraphId),
-      answer_question_id: headingId,
-    }))
+    await submitter.submit({ 
+      exam_id: qd.exam_id, 
+      set_id: qd.set_id, 
+      answers: ans 
+    })
+  }, [submitter])
 
-    await submitter.submit({ exam_id: qd.exam_id, matches: matchesArray })
-  }, [submitter.submit])
-
-  const paragraphs = questionData?.set.questions ?? []
-  const allMatched = paragraphs.length > 0 && paragraphs.every((p) => matches[p.id] !== undefined)
+  const paragraphs = questionData?.paragraphs ?? []
+  const allMatched = paragraphs.length > 0 && paragraphs.every((p) => answers[p.position.toString()] !== undefined)
 
   return {
     loading: loader.loading,
     error: loader.error,
     retry: loader.retry,
     questionData,
-    matches,
+    answers,
     handleSelect,
     submitting: submitter.submitting,
     result: submitter.result,
