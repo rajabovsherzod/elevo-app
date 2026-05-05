@@ -187,7 +187,53 @@ export interface ListeningPart3EvaluateResponseOld {
   details: ListeningPart3AnswerDetailOld[]
 }
 
-// ── Part 4 Types ──────────────────────────────────────────────────────────────
+// ── Part 4 Types (SIMPLE STRUCTURE) ──────────────────────────────────────────
+
+export interface ListeningPart4Place {
+  position: number  // 1-5
+  text: string
+}
+
+export interface ListeningPart4QuestionsResponseSimple {
+  exam_id: number
+  part: number
+  question_id: number
+  title: string | null
+  instruction: string | null
+  audio_url: string | null
+  map_image_url: string | null
+  places: ListeningPart4Place[]  // 5 places
+  options_count: number  // 6, 7, or 8 (A-F, A-G, A-H)
+}
+
+export interface ListeningPart4EvaluateRequestSimple {
+  answers: Record<string, string>  // {"1": "B", "2": "E", "3": "G", "4": "F", "5": "H"}
+}
+
+export interface ListeningPart4ResultItem {
+  is_correct: boolean
+  user_answer: string
+  correct_answer: string
+}
+
+export interface ListeningPart4EvaluateResponseSimple {
+  question: {
+    id: number
+    title: string | null
+    instruction: string | null
+    audio_url: string | null
+    map_image_url: string | null
+  }
+  places: ListeningPart4Place[]
+  results: Record<string, ListeningPart4ResultItem>  // {"1": {...}, "2": {...}, ...}
+  summary: {
+    correct_count: number
+    total: number
+    score_percent: number
+  }
+}
+
+// ── Part 4 Types (OLD COMPLEX STRUCTURE - for backward compatibility) ────────
 
 export interface ListeningPart4FieldItem {
   id: number
@@ -395,7 +441,38 @@ export interface ListeningPart5EvaluateResponse {
   details: ListeningPart5AnswerDetail[]
 }
 
-// ── Part 4 API Functions ──────────────────────────────────────────────────────
+// ── Part 4 API Functions (SIMPLE STRUCTURE) ───────────────────────────────────
+
+export async function getListeningPart4QuestionsSimple(
+  examId?: number
+): Promise<ListeningPart4QuestionsResponseSimple> {
+  if (!examId) {
+    throw new Error("exam_id is required for Listening Part 4")
+  }
+  
+  const params: Record<string, unknown> = {}
+  params._t = Date.now()
+  
+  const { data } = await apiClient.get<ListeningPart4QuestionsResponseSimple>(
+    ENDPOINTS.listening.part4Simple.question(examId),
+    { params }
+  )
+  return data
+}
+
+export async function evaluateListeningPart4Simple(
+  examId: number,
+  questionId: number,
+  payload: ListeningPart4EvaluateRequestSimple
+): Promise<ListeningPart4EvaluateResponseSimple> {
+  const { data } = await apiClient.post<ListeningPart4EvaluateResponseSimple>(
+    ENDPOINTS.listening.part4Simple.evaluate(examId, questionId),
+    payload
+  )
+  return data
+}
+
+// ── Part 4 API Functions (OLD - for backward compatibility) ───────────────────
 
 export async function getListeningPart4Questions(
   examId?: number

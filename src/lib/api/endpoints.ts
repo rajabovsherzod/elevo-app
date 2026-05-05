@@ -50,6 +50,11 @@ export const ENDPOINTS = {
       evaluate: (examId: number, questionId: number) => 
         `/api/multilevel/${examId}/listening/part3/${questionId}/evaluate/`,
     },
+    part4Simple: {
+      question: (examId: number) => `/api/multilevel/${examId}/listening/part4/question/`,
+      evaluate: (examId: number, questionId: number) => 
+        `/api/multilevel/${examId}/listening/part4/${questionId}/evaluate/`,
+    },
     all: {
       question: "/api/multilevel/listening/all/question/",
       evaluate: "/api/multilevel/listening/all/evaluate/",
