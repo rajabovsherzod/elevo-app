@@ -57,8 +57,13 @@ export const ENDPOINTS = {
     },
     part5Simple: {
       question: (examId: number) => `/api/multilevel/${examId}/listening/part5/question/`,
-      evaluate: (examId: number, questionId: number) => 
+      evaluate: (examId: number, questionId: number) =>
         `/api/multilevel/${examId}/listening/part5/${questionId}/evaluate/`,
+    },
+    part6Simple: {
+      question: (examId: number) => `/api/multilevel/${examId}/listening/part6/question/`,
+      evaluate: (examId: number, questionId: number) =>
+        `/api/multilevel/${examId}/listening/part6/${questionId}/evaluate/`,
     },
     all: {
       question: "/api/multilevel/listening/all/question/",

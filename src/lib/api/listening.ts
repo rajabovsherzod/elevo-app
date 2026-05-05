@@ -648,6 +648,69 @@ export async function evaluateListeningPart5(
   }
 }
 
+// ── Part 6 Types (SIMPLE STRUCTURE) ──────────────────────────────────────────
+
+export interface ListeningPart6QuestionsResponseSimple {
+  exam_id: number
+  part: number
+  question_id: number
+  title: string | null
+  instruction: string | null
+  question: string | null  // Text with _1_, _2_, etc.
+  audio_url: string | null
+  positions: number[]  // [1, 2, 3, 4, 5, 6]
+}
+
+export interface ListeningPart6EvaluateRequestSimple {
+  answers: Record<string, string>  // {"1": "Monday", "2": "Paris", ...}
+}
+
+export interface ListeningPart6ResultItemSimple {
+  is_correct: boolean
+  user_answer: string
+  correct_answer: string
+}
+
+export interface ListeningPart6EvaluateResponseSimple {
+  question: {
+    id: number
+    title: string | null
+    instruction: string | null
+    question: string | null  // Text with gaps
+    audio_url: string | null
+  }
+  results: Record<string, ListeningPart6ResultItemSimple>
+  summary: {
+    correct_count: number
+    total: number
+    score_percent: number
+  }
+}
+
+// ── Part 6 API Functions (SIMPLE STRUCTURE) ───────────────────────────────────
+
+export async function getListeningPart6QuestionsSimple(
+  examId: number
+): Promise<ListeningPart6QuestionsResponseSimple> {
+  const { data } = await apiClient.get<ListeningPart6QuestionsResponseSimple>(
+    ENDPOINTS.listening.part6Simple.question(examId),
+    { params: { _t: Date.now() } }
+  )
+  return data
+}
+
+export async function evaluateListeningPart6Simple(
+  examId: number,
+  questionId: number,
+  payload: ListeningPart6EvaluateRequestSimple
+): Promise<ListeningPart6EvaluateResponseSimple> {
+  const { data } = await apiClient.post<ListeningPart6EvaluateResponseSimple>(
+    ENDPOINTS.listening.part6Simple.evaluate(examId, questionId),
+    payload
+  )
+  return data
+}
+
 // ── Part 6 Types ──────────────────────────────────────────────────────────────
 
 export interface ListeningPart6Question {

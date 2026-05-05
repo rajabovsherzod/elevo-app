@@ -1,19 +1,19 @@
 import { memo } from "react"
 import { cx } from "@/utils/cx"
-import type { ListeningPart6EvaluateResponse } from "@/lib/api/listening"
+import type { ListeningPart6EvaluateResponseSimple } from "@/lib/api/listening"
 
 interface GapInputProps {
   position: number
   value: string
   onChange: (pos: number, val: string) => void
   disabled: boolean
-  result?: ListeningPart6EvaluateResponse | null
+  result?: ListeningPart6EvaluateResponseSimple | null
 }
 
 const GapInput = memo(function GapInput({ position, value, onChange, disabled, result }: GapInputProps) {
-  const detail  = result?.details.find(d => d.position === position)
+  const detail  = result?.results?.[String(position)]
   const checked = !!result && !!detail
-  const correct = detail?.correct
+  const correct = detail?.is_correct
 
   return (
     <span
@@ -46,7 +46,6 @@ const GapInput = memo(function GapInput({ position, value, onChange, disabled, r
   )
 })
 
-// Parse a single line (no newlines) into text + gap segments
 function parseLineSegments(
   line: string,
   posSet: Set<number> | null,
@@ -54,7 +53,7 @@ function parseLineSegments(
   answers: Record<number, string>,
   onAnswerChange: (pos: number, val: string) => void,
   disabled: boolean,
-  result?: ListeningPart6EvaluateResponse | null,
+  result?: ListeningPart6EvaluateResponseSimple | null,
 ) {
   const processed = line.replace(/_{1,}(\d+)_{1,}/g, (_, num) => {
     const pos = parseInt(num)
@@ -86,7 +85,7 @@ interface Props {
   answers: Record<number, string>
   onAnswerChange: (pos: number, val: string) => void
   disabled?: boolean
-  result?: ListeningPart6EvaluateResponse | null
+  result?: ListeningPart6EvaluateResponseSimple | null
 }
 
 export const ListeningPart6GapText = memo(function ListeningPart6GapText({ text, positions, answers, onAnswerChange, disabled, result }: Props) {
@@ -96,7 +95,6 @@ export const ListeningPart6GapText = memo(function ListeningPart6GapText({ text,
   const safePos = positions ?? []
   const posSet  = safePos.length > 0 ? new Set(safePos) : null
 
-  // Normalise newline markers: // → \n, \r\n → \n
   const normalised = safeText
     .replace(/\/\//g, "\n")
     .replace(/\r\n/g, "\n")

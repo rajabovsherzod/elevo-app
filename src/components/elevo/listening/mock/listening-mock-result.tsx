@@ -2,34 +2,35 @@
 
 import { useRef, useEffect } from "react"
 import { Headphones, RefreshCw } from "@/lib/icons"
-import type { ListeningFullMockEvaluateResponse } from "@/lib/api/listening-mock"
+import { AnswerCard } from "@/components/elevo/shared/answer-card"
+import type { ListeningMockEvaluateResponse } from "@/lib/api/listening-mock"
 
 interface Props {
-  result: ListeningFullMockEvaluateResponse
+  result: ListeningMockEvaluateResponse
   onRetry: () => void
 }
 
-const PART_NAMES: Record<string, { label: string; desc: string }> = {
-  part1: { label: "Part 1", desc: "Short Conversations" },
-  part2: { label: "Part 2", desc: "Gap Filling" },
-  part3: { label: "Part 3", desc: "Matching" },
-  part4: { label: "Part 4", desc: "Matching" },
-  part5: { label: "Part 5", desc: "Multiple Choice" },
-  part6: { label: "Part 6", desc: "Gap Filling" },
+const PART_NAMES: Record<string, { label: string; desc: string; range: string }> = {
+  part1: { label: "Part 1", desc: "Short Conversations", range: "1-8" },
+  part2: { label: "Part 2", desc: "Gap Filling", range: "9-13" },
+  part3: { label: "Part 3", desc: "Speaker Matching", range: "14-18" },
+  part4: { label: "Part 4", desc: "Map Task", range: "19-23" },
+  part5: { label: "Part 5", desc: "Multiple Choice", range: "24-29" },
+  part6: { label: "Part 6", desc: "Gap Filling", range: "30-35" },
 }
 
 const CEFR_COLORS: Record<string, string> = {
-  C1: "text-emerald-500",
-  B2: "text-blue-500",
-  B1: "text-amber-500",
-  "Below B1": "text-red-400",
+  C1: "text-indigo-500",
+  B2: "text-indigo-500",
+  B1: "text-indigo-500",
+  "Below B1": "text-indigo-500",
 }
 
 const CEFR_BG: Record<string, string> = {
-  C1: "bg-emerald-500/10 border-emerald-500/20",
-  B2: "bg-blue-500/10 border-blue-500/20",
-  B1: "bg-amber-500/10 border-amber-500/20",
-  "Below B1": "bg-red-400/10 border-red-400/20",
+  C1: "bg-indigo-500/10 border-indigo-500/20",
+  B2: "bg-indigo-500/10 border-indigo-500/20",
+  B1: "bg-indigo-500/10 border-indigo-500/20",
+  "Below B1": "bg-indigo-500/10 border-indigo-500/20",
 }
 
 export function ListeningMockResult({ result, onRetry }: Props) {
@@ -49,6 +50,16 @@ export function ListeningMockResult({ result, onRetry }: Props) {
 
   const cefrColor = CEFR_COLORS[result.cefr_level] || "text-on-surface"
   const cefrBg = CEFR_BG[result.cefr_level] || "bg-surface-container border-outline-variant"
+
+  // Build answer cards from global results (1-35)
+  const answerCards = Object.entries(result.results)
+    .sort(([a], [b]) => parseInt(a) - parseInt(b))
+    .map(([position, item]) => ({
+      position: parseInt(position),
+      isCorrect: item.is_correct,
+      userAnswer: item.user_answer || "—",
+      correctAnswer: item.correct_answer || "—",
+    }))
 
   return (
     <div className="flex flex-col gap-5 animate-fade-in">
@@ -79,7 +90,7 @@ export function ListeningMockResult({ result, onRetry }: Props) {
           </div>
           {/* CEFR Badge */}
           <div className={`px-4 py-2 rounded-xl border ${cefrBg}`}>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant/60 mb-0.5">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-on-surface mb-0.5">
               CEFR Level
             </p>
             <p className={`text-xl font-black ${cefrColor}`}>
@@ -107,10 +118,10 @@ export function ListeningMockResult({ result, onRetry }: Props) {
         </div>
 
         <div className="p-4 flex flex-col gap-3">
-          {Object.entries(result.parts).map(([key, partResult]) => {
-            if (!partResult) return null
-            const meta = PART_NAMES[key] || { label: key, desc: "" }
-            const pct = Math.round(partResult.score_percent)
+          {Object.entries(result.part_details).map(([key, partDetail]) => {
+            if (!partDetail) return null
+            const meta = PART_NAMES[key] || { label: key, desc: "", range: "" }
+            const pct = Math.round(partDetail.summary.score_percent)
             const good = pct >= 65
 
             return (
@@ -120,7 +131,9 @@ export function ListeningMockResult({ result, onRetry }: Props) {
               >
                 {/* Part info */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-on-surface">{meta.label}</p>
+                  <p className="text-xs font-bold text-on-surface">
+                    {meta.label} <span className="text-on-surface-variant">({meta.range})</span>
+                  </p>
                   <p className="text-[10px] text-on-surface-variant">{meta.desc}</p>
                 </div>
 
@@ -130,7 +143,7 @@ export function ListeningMockResult({ result, onRetry }: Props) {
                     {pct}%
                   </p>
                   <p className="text-[10px] text-on-surface-variant">
-                    {partResult.correct_count}/{partResult.total_questions}
+                    {partDetail.summary.correct_count}/{partDetail.summary.total}
                   </p>
                 </div>
 
@@ -144,6 +157,28 @@ export function ListeningMockResult({ result, onRetry }: Props) {
               </div>
             )
           })}
+        </div>
+      </div>
+
+      {/* ── Answer Cards Grid (1-35) ────────────────────────────────────────── */}
+      <div className="elevo-card elevo-card-border overflow-hidden">
+        <div className="px-4 py-3 bg-indigo-500/10">
+          <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">
+            Answer Review (1-35)
+          </p>
+        </div>
+        <div className="p-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {answerCards.map((card) => (
+              <AnswerCard
+                key={card.position}
+                questionNumber={card.position}
+                userAnswer={card.userAnswer}
+                correctAnswer={card.correctAnswer}
+                isCorrect={card.isCorrect}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
