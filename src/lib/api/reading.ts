@@ -51,12 +51,16 @@ export interface ReadingPart1AnswerDetail {
   user_answer: string
   correct_answer: string | null
   correct: boolean
+  explanation_uz?: string | null
+  explanation_en?: string | null
 }
 
 export interface ReadingPart1ResultItem {
   is_correct: boolean
   user_answer: string
   correct_answer: string
+  explanation_uz?: string | null
+  explanation_en?: string | null
 }
 
 export interface ReadingPart1EvaluateResponse {
@@ -268,6 +272,8 @@ export async function evaluateReadingPart1(
     user_answer: result.user_answer,
     correct_answer: result.correct_answer,
     correct: result.is_correct,
+    explanation_uz: result.explanation_uz,
+    explanation_en: result.explanation_en,
   }))
   
   const transformed: ReadingPart1EvaluateResponse = {

@@ -1,6 +1,6 @@
 "use client"
 
-import { lazy, Suspense, useMemo } from "react"
+import { useMemo } from "react"
 import { Button } from "@/components/base/buttons/button"
 import { ExamLoading } from "@/components/elevo/shared/exam-loading"
 import { ExamTimer } from "@/components/elevo/shared/exam-timer"
@@ -8,18 +8,8 @@ import { CalculatingResults } from "@/components/elevo/shared/calculating-result
 import { ErrorCard } from "@/components/elevo/shared/error-card"
 import { useReadingPart1 } from "@/hooks/reading/part-1/use-reading-part1"
 import { ReadingPart1Text } from "./reading-part1-text"
-
-const ReadingPart1Result = lazy(() =>
-  import("./reading-part1-result").then((mod) => ({
-    default: mod.ReadingPart1Result,
-  }))
-)
-
-const ReadingPart1ReviewAccordion = lazy(() =>
-  import("./reading-part1-review-accordion").then((mod) => ({
-    default: mod.ReadingPart1ReviewAccordion,
-  }))
-)
+import { ReadingPart1Result } from "./reading-part1-result"
+import { ReadingPart1ReviewAccordion } from "./reading-part1-review-accordion"
 
 export function ReadingPart1Content() {
   const {
@@ -89,30 +79,30 @@ export function ReadingPart1Content() {
         </div>
       )}
 
-      {/* Passage card */}
-      <div className="elevo-card elevo-card-border p-5 flex flex-col gap-4">
-        {questionData?.title && (
-          <h2 className="text-sm font-bold text-on-surface">{questionData.title}</h2>
-        )}
-        {questionData?.instruction && (
-          <p className="text-xs text-on-surface-variant">{questionData.instruction}</p>
-        )}
+      {/* Passage card - faqat result bo'lmasa ko'rsatiladi */}
+      {!result && (
+        <div className="elevo-card elevo-card-border p-5 flex flex-col gap-4">
+          {questionData?.title && (
+            <h2 className="text-sm font-bold text-on-surface">{questionData.title}</h2>
+          )}
+          {questionData?.instruction && (
+            <p className="text-xs text-on-surface-variant">{questionData.instruction}</p>
+          )}
 
-        {/* Text with inline inputs */}
-        <div
-          className="rounded-xl p-4 elevo-card-border"
-          style={{ background: "color-mix(in srgb, currentColor 3%, transparent)" }}
-        >
-          <ReadingPart1Text
-            text={questionData?.text || ""}
-            positions={questionData?.positions || []}
-            answers={answers}
-            onAnswerChange={handleAnswerChange}
-            result={result}
-          />
-        </div>
+          {/* Text with inline inputs */}
+          <div
+            className="rounded-xl p-4 elevo-card-border"
+            style={{ background: "color-mix(in srgb, currentColor 3%, transparent)" }}
+          >
+            <ReadingPart1Text
+              text={questionData?.text || ""}
+              positions={questionData?.positions || []}
+              answers={answers}
+              onAnswerChange={handleAnswerChange}
+              result={result}
+            />
+          </div>
 
-        {!result && (
           <div className="flex justify-end">
             <Button
               size="md"
@@ -124,24 +114,16 @@ export function ReadingPart1Content() {
               Submit Answers
             </Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {result && (
         <>
-          <Suspense
-            fallback={<div className="elevo-card p-8 animate-pulse">Loading results...</div>}
-          >
-            <ReadingPart1Result result={result} />
-          </Suspense>
+          <ReadingPart1Result result={result} />
 
           {/* Review Accordion */}
           {questionData && (
-            <Suspense
-              fallback={<div className="elevo-card p-8 animate-pulse">Loading review...</div>}
-            >
-              <ReadingPart1ReviewAccordion questionData={questionData} result={result} />
-            </Suspense>
+            <ReadingPart1ReviewAccordion questionData={questionData} result={result} />
           )}
         </>
       )}

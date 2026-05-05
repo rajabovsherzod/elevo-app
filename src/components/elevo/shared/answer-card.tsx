@@ -6,6 +6,9 @@ interface AnswerCardProps {
   userAnswer: string
   correctAnswer: string
   isCorrect: boolean
+  explanation_uz?: string | null
+  explanation_en?: string | null
+  onExplanationClick?: () => void
 }
 
 /**
@@ -15,20 +18,37 @@ interface AnswerCardProps {
  * 
  * Mobile: YA / CA labels
  * Desktop: Your Answer / Correct Answer labels
+ * 
+ * Optional: Shows "Why?" button if explanation is available
  */
 export const AnswerCard = memo(function AnswerCard({
   questionNumber,
   userAnswer,
   correctAnswer,
   isCorrect,
+  explanation_uz,
+  explanation_en,
+  onExplanationClick,
 }: AnswerCardProps) {
+  const hasExplanation = !isCorrect && (explanation_uz || explanation_en)
+  
   return (
     <div className="flex flex-col gap-2 p-3 rounded-xl bg-surface-container/50 border border-outline-variant">
-      {/* Header: Number + Icon */}
+      {/* Header: Number + Why? + Icon */}
       <div className="flex items-center justify-between">
-        <span className="w-6 h-6 rounded-lg text-[11px] font-black flex items-center justify-center bg-primary text-white shadow-sm">
-          {questionNumber}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="w-6 h-6 rounded-lg text-[11px] font-black flex items-center justify-center bg-primary text-white shadow-sm">
+            {questionNumber}
+          </span>
+          {hasExplanation && onExplanationClick && (
+            <button
+              onClick={onExplanationClick}
+              className="text-[10px] font-semibold text-indigo-600 hover:text-indigo-700 transition-colors"
+            >
+              Why?
+            </button>
+          )}
+        </div>
         {isCorrect ? (
           <CheckCircle2 className="w-4 h-4 text-green-500" />
         ) : (

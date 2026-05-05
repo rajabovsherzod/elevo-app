@@ -66,8 +66,13 @@ export function useReadingPart1() {
     enabled: !loader.loading && !submitter.result && !loader.error,
   })
 
-  // Load question on mount
+  // Load question on mount (only once, prevent double-loading in React Strict Mode)
+  const hasLoadedRef = useRef(false)
+  
   useEffect(() => {
+    if (hasLoadedRef.current) return // Already loaded
+    hasLoadedRef.current = true
+    
     // Clear previous data to prevent flickering
     setQuestionData(null)
     setAnswers({})

@@ -38,6 +38,7 @@ export {
   XCircle,
   AlertCircle,
   Check,
+  Info,
   
   // UI Elements
   Clock,
@@ -93,7 +94,6 @@ export {
   // Actions
   Copy,
   Send,
-  Info,
   CreditCard,
   Loader2,
   
