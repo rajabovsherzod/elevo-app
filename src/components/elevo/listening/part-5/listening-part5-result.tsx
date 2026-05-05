@@ -1,32 +1,26 @@
 "use client"
 
 import { useRef, useEffect, useState, memo } from "react"
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp } from "@/lib/icons"
+import { ChevronDown, ChevronUp } from "@/lib/icons"
 import { AnimatePresence, motion } from "framer-motion"
 import { cx } from "@/utils/cx"
-import { ListeningAudioPlayer } from "@/components/elevo/listening/shared"
 import type {
-  ListeningPart5Extract,
-  ListeningPart5EvaluateResponse,
+  ListeningPart5EvaluateResponseSimple,
+  ListeningPart5QuestionsResponseSimple,
 } from "@/lib/api/listening"
+import { ListeningAudioPlayer } from "@/components/elevo/listening/shared"
+import { AnswerCard } from "@/components/elevo/shared/answer-card"
 
-// ── Answer Review Grid (like Part 2/3/4) ─────────────────────────────────────
+// ── Answer Review Grid ────────────────────────────────────────────────────────
 const AnswerReview = memo(function AnswerReview({
-  details,
+  results,
   extracts,
-  userAnswers,
 }: {
-  details:     ListeningPart5EvaluateResponse["details"]
-  extracts:    ListeningPart5Extract[]
-  userAnswers: Record<number, number>
+  results: Record<string, { is_correct: boolean; user_answer: string; correct_answer: string }>
+  extracts: ListeningPart5QuestionsResponseSimple["extracts"]
 }) {
-  // Flatten all questions from all extracts
-  const allQuestions: Array<{ extractIndex: number; questionIndex: number; question: any }> = []
-  extracts.forEach((extract, ei) => {
-    extract.questions.forEach((q, qi) => {
-      allQuestions.push({ extractIndex: ei, questionIndex: qi, question: q })
-    })
-  })
+  // Flatten all questions from extracts
+  const allQuestions = extracts.flatMap(ext => ext.questions)
 
   return (
     <div className="elevo-card elevo-card-border overflow-hidden">
@@ -37,62 +31,19 @@ const AnswerReview = memo(function AnswerReview({
       </div>
       <div className="p-4">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {allQuestions.map(({ extractIndex, questionIndex, question }, globalIndex) => {
-            const detail       = details.find(d => d.question_id === question.id)
-            const userAnswerId = userAnswers[question.id]
-            const isCorrect    = detail?.correct ?? false
-
-            const userOpt    = question.answers.find((a: any) => a.id === userAnswerId)
-            const correctOpt = question.answers.find((a: any) => a.id === detail?.correct_answer_id)
-
-            const userLetter    = userOpt ? String.fromCharCode(65 + question.answers.indexOf(userOpt)) : "—"
-            const correctLetter = correctOpt ? String.fromCharCode(65 + question.answers.indexOf(correctOpt)) : "—"
+          {allQuestions.map((q) => {
+            const positionKey = String(q.position)
+            const resultItem = results[positionKey]
+            if (!resultItem) return null
 
             return (
-              <div
-                key={question.id}
-                className="flex flex-col gap-2 p-3 rounded-xl bg-surface-container/50 border border-outline-variant"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="w-6 h-6 rounded-lg text-[11px] font-black flex items-center justify-center bg-indigo-500 text-white shadow-sm">
-                    {globalIndex + 1}
-                  </span>
-                  {isCorrect
-                    ? <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    : <XCircle      className="w-4 h-4 text-error" />
-                  }
-                </div>
-
-                <p className="text-[11px] text-on-surface-variant font-medium truncate">
-                  Extract {extractIndex + 1} Q{questionIndex + 1}
-                </p>
-
-                {isCorrect ? (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[13px] font-black text-green-600">{userLetter}.</span>
-                    <span className="text-[11px] font-semibold text-green-600 truncate">
-                      {userOpt?.answer}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[13px] font-black text-error line-through opacity-70">{userLetter}.</span>
-                      <span className="text-[11px] font-semibold text-error line-through opacity-70 truncate">
-                        {userOpt?.answer}
-                      </span>
-                    </div>
-                    {correctLetter && correctLetter !== "—" && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[13px] font-black text-green-600">{correctLetter}.</span>
-                        <span className="text-[11px] font-semibold text-green-600 truncate">
-                          {correctOpt?.answer}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+              <AnswerCard
+                key={q.position}
+                questionNumber={q.position}
+                isCorrect={resultItem.is_correct}
+                userAnswer={resultItem.user_answer}
+                correctAnswer={resultItem.correct_answer}
+              />
             )
           })}
         </div>
@@ -101,15 +52,13 @@ const AnswerReview = memo(function AnswerReview({
   )
 })
 
-// ── Extracts Accordion (like Part 2/3/4) ─────────────────────────────────────
-const ExtractsAccordion = memo(function ExtractsAccordion({
+// ── Questions Accordion ───────────────────────────────────────────────────────
+const QuestionsAccordion = memo(function QuestionsAccordion({
   extracts,
-  details,
-  userAnswers,
+  results,
 }: {
-  extracts:    ListeningPart5Extract[]
-  details:     ListeningPart5EvaluateResponse["details"]
-  userAnswers: Record<number, number>
+  extracts: ListeningPart5QuestionsResponseSimple["extracts"]
+  results: Record<string, { is_correct: boolean; user_answer: string; correct_answer: string }>
 }) {
   const [open, setOpen] = useState(false)
 
@@ -117,7 +66,7 @@ const ExtractsAccordion = memo(function ExtractsAccordion({
     <div className="elevo-card elevo-card-border overflow-hidden">
       <div className="px-4 py-3 bg-primary/10">
         <p className="text-[10px] font-black uppercase tracking-widest text-primary">
-          All Extracts & Questions
+          Questions & Correct Answers
         </p>
       </div>
       <button
@@ -125,9 +74,7 @@ const ExtractsAccordion = memo(function ExtractsAccordion({
         onClick={() => setOpen(p => !p)}
         className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container/40 transition-colors"
       >
-        <span className="text-sm font-bold text-on-surface">
-          View {extracts.length} extracts with questions
-        </span>
+        <span className="text-sm font-bold text-on-surface">View all questions with correct answers</span>
         {open
           ? <ChevronUp   className="w-4 h-4 text-on-surface-variant" />
           : <ChevronDown className="w-4 h-4 text-on-surface-variant" />
@@ -142,71 +89,59 @@ const ExtractsAccordion = memo(function ExtractsAccordion({
             transition={{ duration: 0.25, ease: "easeInOut" }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-4 pt-1 flex flex-col gap-4">
-              {extracts.map((extract, ei) => (
-                <div key={extract.id} className="flex flex-col gap-3">
-                  {/* Extract header */}
-                  <div className="flex items-center gap-2 pt-2">
-                    <span className="w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center bg-primary text-white flex-shrink-0">
-                      {ei + 1}
-                    </span>
-                    <p className="text-xs font-bold text-on-surface">
-                      Extract {ei + 1}
-                      {extract.title ? ` — ${extract.title}` : ""}
-                    </p>
+            <div className="px-4 pb-4 pt-1 flex flex-col gap-5">
+              {extracts.map((extract, idx) => (
+                <div key={extract.extract_number}>
+                  <div className="flex flex-col gap-3">
+                    {/* Extract header with dashed line */}
+                    <div className="flex items-center gap-3">
+                      <p className="text-sm font-bold text-on-surface whitespace-nowrap">
+                        Extract {extract.extract_number}
+                      </p>
+                      <div className="flex-1 border-t-2 border-dashed border-outline-variant/60" />
+                    </div>
+
+                    {/* Questions */}
+                    {extract.questions.map((q) => {
+                      const positionKey = String(q.position)
+                      const resultItem = results[positionKey]
+                      const correctLetter = resultItem?.correct_answer || ""
+
+                      return (
+                        <div key={q.position} className="flex flex-col gap-2 pl-4">
+                          {/* Question */}
+                          <div className="flex items-start gap-2">
+                            <span className="w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center bg-indigo-500 text-white flex-shrink-0 mt-0.5">
+                              {q.position}
+                            </span>
+                            <p className="text-sm font-semibold text-on-surface flex-1">
+                              {q.question}
+                            </p>
+                          </div>
+
+                          {/* Answer options */}
+                          <div className="pl-8 flex flex-col gap-1.5">
+                            {q.answers.map((a) => {
+                              const isCorrect = a.letter === correctLetter
+                              return (
+                                <p key={a.letter} className="text-xs text-on-surface-variant">
+                                  <span className="font-bold text-on-surface">
+                                    {a.letter}.
+                                  </span>{" "}
+                                  {a.text}
+                                  {isCorrect && (
+                                    <span className="ml-2 px-2 py-0.5 rounded-md bg-green-500/10 text-green-600 text-[10px] font-bold">
+                                      Correct
+                                    </span>
+                                  )}
+                                </p>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
-
-                  {/* Questions */}
-                  {extract.questions.map((q, qi) => {
-                    const detail       = details.find(d => d.question_id === q.id)
-                    const userAnswerId = userAnswers[q.id]
-                    const isCorrect    = detail?.correct ?? false
-
-                    return (
-                      <div
-                        key={q.id}
-                        className="flex flex-col gap-2 p-3 rounded-xl border border-outline-variant ml-8"
-                      >
-                        {/* Question text */}
-                        <div className="flex items-start gap-2">
-                          <span className="w-5 h-5 rounded-md text-[10px] font-black flex items-center justify-center bg-indigo-500 text-white flex-shrink-0 mt-0.5">
-                            {ei * 2 + qi + 1}
-                          </span>
-                          <p className="text-xs font-semibold text-on-surface leading-snug">
-                            {q.question}
-                          </p>
-                        </div>
-
-                        {/* Answers - show ALL 3 options */}
-                        <div className="flex flex-col gap-1.5 pl-7">
-                          {q.answers.map((opt, oi) => {
-                            const letter       = String.fromCharCode(65 + oi)
-                            const isUser       = opt.id === userAnswerId
-                            const isCorrectOpt = opt.id === detail?.correct_answer_id
-
-                            return (
-                              <div
-                                key={opt.id}
-                                className="flex items-center gap-2 text-xs text-on-surface"
-                              >
-                                <span className="w-5 h-5 rounded-md text-[10px] font-black flex items-center justify-center flex-shrink-0 bg-surface-container text-on-surface-variant">
-                                  {letter}
-                                </span>
-                                <span className="leading-snug flex-1">{opt.answer}</span>
-                                {/* Show icons for user/correct */}
-                                {isCorrectOpt && (
-                                  <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                                )}
-                                {isUser && !isCorrectOpt && (
-                                  <XCircle className="w-4 h-4 text-error flex-shrink-0" />
-                                )}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )
-                  })}
                 </div>
               ))}
             </div>
@@ -217,17 +152,17 @@ const ExtractsAccordion = memo(function ExtractsAccordion({
   )
 })
 
-// ── Props / Main ──────────────────────────────────────────────────────────────
+// ── Props ─────────────────────────────────────────────────────────────────────
 interface Props {
-  result:      ListeningPart5EvaluateResponse
-  extracts:    ListeningPart5Extract[]
-  audioUrls:   string[]
-  userAnswers: Record<number, number>
+  result:   ListeningPart5EvaluateResponseSimple
+  question: ListeningPart5QuestionsResponseSimple
+  answers:  Record<number, string>
 }
 
-export function ListeningPart5Result({ result, extracts, audioUrls, userAnswers }: Props) {
+// ── Main ──────────────────────────────────────────────────────────────────────
+export function ListeningPart5Result({ result, question, answers }: Props) {
   const barRef       = useRef<HTMLDivElement>(null)
-  const scorePercent = Math.round(result.score_percent)
+  const scorePercent = Math.round(result.summary.score_percent)
   const isGood       = scorePercent >= 70
 
   useEffect(() => {
@@ -240,6 +175,8 @@ export function ListeningPart5Result({ result, extracts, audioUrls, userAnswers 
     el.style.width = `${scorePercent}%`
   }, [scorePercent])
 
+  const audioUrl = result.question.audio_url || question.audio_url
+
   return (
     <div className="flex flex-col gap-4 animate-fade-in">
 
@@ -251,11 +188,11 @@ export function ListeningPart5Result({ result, extracts, audioUrls, userAnswers 
               Your Score
             </p>
             <p className="text-sm font-semibold text-on-surface">
-              {result.correct_count} / {result.total_questions} correct
+              {result.summary.correct_count} / {result.summary.total} correct
             </p>
-            {result.total_questions - result.correct_count > 0 && (
+            {result.summary.total - result.summary.correct_count > 0 && (
               <p className="text-xs text-on-surface-variant mt-0.5">
-                {result.total_questions - result.correct_count} incorrect
+                {result.summary.total - result.summary.correct_count} incorrect
               </p>
             )}
           </div>
@@ -272,21 +209,21 @@ export function ListeningPart5Result({ result, extracts, audioUrls, userAnswers 
         </div>
       </div>
 
-      {/* Answer review grid */}
-      <AnswerReview details={result.details} extracts={extracts} userAnswers={userAnswers} />
+      {/* Answer review */}
+      <AnswerReview results={result.results} extracts={question.extracts} />
 
       {/* Audio player */}
-      {audioUrls.length > 0 && audioUrls[0] && (
+      {audioUrl && (
         <div className="elevo-card elevo-card-border p-4" style={{ contain: "layout style paint" }}>
           <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-3">
-            Exam Audio (All Extracts)
+            Exam Audio
           </p>
-          <ListeningAudioPlayer src={audioUrls[0]} />
+          <ListeningAudioPlayer src={audioUrl} />
         </div>
       )}
 
-      {/* Extracts accordion */}
-      <ExtractsAccordion extracts={extracts} details={result.details} userAnswers={userAnswers} />
+      {/* Questions accordion */}
+      <QuestionsAccordion extracts={question.extracts} results={result.results} />
     </div>
   )
 }

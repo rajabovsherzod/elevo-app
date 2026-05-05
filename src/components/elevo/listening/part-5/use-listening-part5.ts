@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import {
-  getListeningPart5Questions,
-  evaluateListeningPart5,
-  type ListeningPart5Extract,
-  type ListeningPart5EvaluateResponse,
+  getListeningPart5QuestionsSimple,
+  evaluateListeningPart5Simple,
+  type ListeningPart5QuestionsResponseSimple,
+  type ListeningPart5EvaluateResponseSimple,
 } from "@/lib/api/listening"
 
 export type ListeningPart5Phase =
@@ -13,7 +13,7 @@ export type ListeningPart5Phase =
   | "instruction"
   | "question-audio"
   | "exam"
-  | "submitting"
+  | "calculating"
   | "result"
   | "error"
 
@@ -21,15 +21,18 @@ const LOAD_TIMEOUT_MS = 30_000
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 1_500
 
+const API_BASE = () =>
+  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "")
+
 function sleep(ms: number) {
   return new Promise<void>(resolve => setTimeout(resolve, ms))
 }
 
-async function fetchPart5WithRetry() {
+async function fetchPart5WithRetry(examId: number) {
   let lastErr: unknown
   for (let i = 0; i < MAX_RETRIES; i++) {
     try {
-      return await getListeningPart5Questions()
+      return await getListeningPart5QuestionsSimple(examId)
     } catch (err) {
       lastErr = err
       if (i < MAX_RETRIES - 1) await sleep(RETRY_DELAY_MS)
@@ -41,116 +44,118 @@ async function fetchPart5WithRetry() {
 function fixAudioUrl(raw: string | null): string {
   if (!raw) return ""
   try {
-    const url = new URL(raw)
-    // Force HTTPS for cloudflare URLs
-    if (url.hostname.includes('trycloudflare.com')) {
-      url.protocol = 'https:'
-    }
-    return url.toString()
+    return API_BASE() + new URL(raw).pathname
   } catch {
     return raw
   }
 }
 
-export function useListeningPart5() {
-  const [phase, setPhase]             = useState<ListeningPart5Phase>("loading")
-  const [extracts, setExtracts]       = useState<ListeningPart5Extract[]>([])
-  const [audioUrls, setAudioUrls]     = useState<string[]>([])
-  const [userAnswers, setUserAnswers] = useState<Record<number, number>>({})
-  const [result, setResult]           = useState<ListeningPart5EvaluateResponse | null>(null)
+export function useListeningPart5(examId: number) {
+  const [phase, setPhase]           = useState<ListeningPart5Phase>("loading")
+  const [question, setQuestion]     = useState<ListeningPart5QuestionsResponseSimple | null>(null)
+  const [answers, setAnswers]       = useState<Record<number, string>>({})  // {1: "A", 2: "B", ...}
+  const [result, setResult]         = useState<ListeningPart5EvaluateResponseSimple | null>(null)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
-  const [errorMsg, setErrorMsg]       = useState<string | null>(null)
-  const [retryKey, setRetryKey]       = useState(0)
+  const [error, setError]           = useState<string | null>(null)
+  const [retryKey, setRetryKey]     = useState(0)
 
-  const audioRef  = useRef<HTMLAudioElement | null>(null)
-  const examIdRef = useRef<number | null>(null)
-
-  const stopAudio = useCallback(() => {
-    const a = audioRef.current
-    if (a) { a.pause(); a.src = ""; audioRef.current = null }
-    setIsAudioPlaying(false)
-  }, [])
-
-  const playAudio = useCallback((src: string, onEnd?: () => void) => {
-    stopAudio()
-    const audio = new Audio(src)
-    audioRef.current = audio
-    setIsAudioPlaying(true)
-    let done = false
-    const finish = () => {
-      if (done) return
-      done = true
-      audio.removeEventListener("ended", finish)
-      audio.removeEventListener("error", finish)
-      setIsAudioPlaying(false)
-      onEnd?.()
-    }
-    audio.addEventListener("ended", finish)
-    audio.addEventListener("error", finish)
-    audio.play().catch(() => finish())
-  }, [stopAudio])
+  const audioRef    = useRef<HTMLAudioElement | null>(null)
+  const submittedRef = useRef(false)
 
   useEffect(() => {
-    setPhase("loading")
-    setExtracts([])
-    setAudioUrls([])
-    setUserAnswers({})
-    setResult(null)
-    setErrorMsg(null)
-    examIdRef.current = null
-
     let cancelled = false
+    submittedRef.current = false
+
+    setPhase("loading")
+    setQuestion(null)
+    setAnswers({})
+    setResult(null)
+    setError(null)
+
+    const stopAudio = () => {
+      const a = audioRef.current
+      if (a) {
+        a.onended  = null
+        a.onerror  = null
+        a.pause()
+        a.currentTime = 0
+        a.src = ""
+        audioRef.current = null
+      }
+      setIsAudioPlaying(false)
+    }
+
+    const playAudio = (src: string, onEnd?: () => void) => {
+      stopAudio()
+      const audio = new Audio(src)
+      audioRef.current = audio
+      setIsAudioPlaying(true)
+      let done = false
+
+      const finish = () => {
+        if (done) return
+        done = true
+        audio.onended = null
+        audio.onerror = null
+        setIsAudioPlaying(false)
+        if (!cancelled && !submittedRef.current) onEnd?.()
+      }
+
+      audio.onended = finish
+      audio.onerror = finish
+      audio.play().catch(() => finish())
+    }
 
     const timeout = setTimeout(() => {
       if (!cancelled) {
         cancelled = true
         stopAudio()
-        setErrorMsg("So'rov juda uzoq davom etdi. Internet aloqasini tekshiring.")
+        setError("So'rov juda uzoq davom etdi. Internet aloqasini tekshiring.")
         setPhase("error")
       }
     }, LOAD_TIMEOUT_MS)
 
-    const playSequential = (urls: string[], idx: number, onDone: () => void) => {
-      if (idx >= urls.length) { onDone(); return }
-      playAudio(urls[idx], () => {
-        if (!cancelled) playSequential(urls, idx + 1, onDone)
-      })
-    }
-
     ;(async () => {
       try {
-        const data = await fetchPart5WithRetry()
+        const response = await fetchPart5WithRetry(examId)
         if (cancelled) return
 
         clearTimeout(timeout)
 
-        // Part 5 has one main audio for all extracts
-        const mainAudioUrl = fixAudioUrl(data.audio_url)
-        console.log('[Part 5] Audio URL:', mainAudioUrl)
-        console.log('[Part 5] Data:', data)
-        examIdRef.current = data.exam_id
-        setExtracts(data.extracts)
-        setAudioUrls(mainAudioUrl ? [mainAudioUrl] : [])
+        setQuestion(response)
+
+        // Initialize answers for 6 positions
+        const blank: Record<number, string> = {}
+        for (let i = 1; i <= 6; i++) {
+          blank[i] = ""
+        }
+        setAnswers(blank)
+
         setPhase("instruction")
 
-        console.log('[Part 5] Playing instruction audio...')
+        // Play instruction audio, then question audio
         playAudio("/sounds/listening-part5.mp3", () => {
-          if (cancelled) return
-          console.log('[Part 5] Instruction done. Playing question audio:', mainAudioUrl)
-          // Play main question audio (one audio for all extracts)
-          if (mainAudioUrl) {
-            setPhase("question-audio")
-            playAudio(mainAudioUrl, () => { if (!cancelled) setPhase("exam") })
+          if (cancelled || submittedRef.current) return
+          
+          setPhase("question-audio")
+          
+          // Play question audio (main audio from backend)
+          const questionAudioUrl = fixAudioUrl(response.audio_url)
+          if (questionAudioUrl) {
+            playAudio(questionAudioUrl, () => {
+              if (cancelled || submittedRef.current) return
+              setPhase("exam")
+            })
           } else {
-            console.log('[Part 5] No audio, going straight to exam')
+            // No audio, go directly to exam
             setPhase("exam")
           }
         })
-      } catch (err: any) {
+      } catch (err: unknown) {
         clearTimeout(timeout)
         if (cancelled) return
-        console.error('[Part 5] Error:', err)
-        setErrorMsg(err?.response?.data?.detail ?? err?.message ?? "Noma'lum xatolik")
+        const e = err as { response?: { data?: { detail?: string } }; message?: string }
+        setError(e?.response?.data?.detail ?? e?.message ?? "Noma'lum xatolik")
         setPhase("error")
       }
     })()
@@ -160,65 +165,73 @@ export function useListeningPart5() {
       clearTimeout(timeout)
       stopAudio()
     }
-  }, [retryKey, stopAudio, playAudio])
+  }, [examId, retryKey])
 
   const retry = useCallback(() => setRetryKey(k => k + 1), [])
 
-  const selectAnswer = useCallback((questionId: number, answerId: number) => {
-    setUserAnswers(prev => ({ ...prev, [questionId]: answerId }))
+  const setAnswer = useCallback((position: number, letter: string) => {
+    setAnswers(prev => ({ ...prev, [position]: letter }))
   }, [])
 
-  const submit = useCallback(async () => {
-    const eid = examIdRef.current
-    if (!eid || extracts.length === 0) return
-    stopAudio()
-    setPhase("submitting")
+  const handleSubmit = useCallback(async () => {
+    if (!question) return
+
+    submittedRef.current = true
+
+    const a = audioRef.current
+    if (a) {
+      a.onended = null
+      a.onerror = null
+      a.pause()
+      a.currentTime = 0
+      a.src = ""
+      audioRef.current = null
+    }
+    setIsAudioPlaying(false)
+    setPhase("calculating")
+
     try {
-      // Read latest userAnswers to avoid dependency
-      const answers = Object.entries(userAnswers).map(([qid, aid]) => ({
-        question_id: Number(qid),
-        answer_id:   Number(aid),
-      }))
+      const answersPayload: Record<string, string> = {}
+      Object.entries(answers).forEach(([pos, letter]) => {
+        answersPayload[pos] = letter
+      })
+
       const [res] = await Promise.all([
-        evaluateListeningPart5({ exam_id: eid, answers }),
-        sleep(1500),
+        evaluateListeningPart5Simple(examId, question.question_id, { answers: answersPayload }),
+        sleep(2000),
       ])
       setResult(res)
       setPhase("result")
-    } catch (err: any) {
-      setErrorMsg(err?.response?.data?.detail ?? err?.message ?? "Noma'lum xatolik")
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } }; message?: string }
+      setError(e?.response?.data?.detail ?? e?.message ?? "Noma'lum xatolik")
       setPhase("error")
     }
-  }, [extracts, userAnswers, stopAudio])
+  }, [examId, question, answers])
 
-  const totalQuestions = useMemo(() => 
-    extracts.reduce((sum, e) => sum + e.questions.length, 0),
-    [extracts]
+  const allFilled = useMemo(() =>
+    question
+      ? Object.values(answers).every(a => a && a.trim().length > 0)
+      : false,
+    [question, answers]
   )
-  
-  const answeredCount = useMemo(() => 
-    Object.keys(userAnswers).length,
-    [userAnswers]
-  )
-  
-  const allAnswered = useMemo(() => 
-    totalQuestions > 0 && answeredCount === totalQuestions,
-    [totalQuestions, answeredCount]
+
+  const filledCount = useMemo(() =>
+    Object.values(answers).filter(a => a && a.trim().length > 0).length,
+    [answers]
   )
 
   return {
     phase,
-    extracts,
-    audioUrls,
-    userAnswers,
+    question,
+    answers,
     result,
     isAudioPlaying,
-    errorMsg,
-    totalQuestions,
-    answeredCount,
-    allAnswered,
-    selectAnswer,
-    submit,
+    error,
+    allFilled,
+    filledCount,
+    setAnswer,
+    handleSubmit,
     retry,
   }
 }

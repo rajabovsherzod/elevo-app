@@ -385,7 +385,62 @@ export async function evaluateListeningPart3(
 
 // ── Part 3 API Functions (OLD - for backward compatibility) ───────────────────
 
-// ── Part 5 Types ──────────────────────────────────────────────────────────────
+// ── Part 5 Types (SIMPLE STRUCTURE) ──────────────────────────────────────────
+
+export interface ListeningPart5AnswerOptionSimple {
+  letter: string  // "A", "B", "C"
+  text: string
+}
+
+export interface ListeningPart5QuestionItem {
+  position: number  // 1-6
+  question: string
+  answers: ListeningPart5AnswerOptionSimple[]  // 3 options A, B, C
+}
+
+export interface ListeningPart5ExtractSimple {
+  extract_number: number  // 1, 2, 3
+  audio_url: string | null
+  questions: ListeningPart5QuestionItem[]  // 2 questions per extract
+}
+
+export interface ListeningPart5QuestionsResponseSimple {
+  exam_id: number
+  part: number
+  question_id: number
+  title: string | null
+  instruction: string | null
+  audio_url: string | null  // Main audio for all extracts
+  extracts: ListeningPart5ExtractSimple[]  // 3 extracts
+}
+
+export interface ListeningPart5EvaluateRequestSimple {
+  answers: Record<string, string>  // {"1": "A", "2": "B", "3": "C", "4": "A", "5": "B", "6": "C"}
+}
+
+export interface ListeningPart5ResultItem {
+  is_correct: boolean
+  user_answer: string
+  correct_answer: string
+}
+
+export interface ListeningPart5EvaluateResponseSimple {
+  question: {
+    id: number
+    title: string | null
+    instruction: string | null
+    audio_url: string | null  // Main audio
+  }
+  extracts: ListeningPart5ExtractSimple[]
+  results: Record<string, ListeningPart5ResultItem>  // {"1": {...}, "2": {...}, ...}
+  summary: {
+    correct_count: number
+    total: number
+    score_percent: number
+  }
+}
+
+// ── Part 5 Types (OLD COMPLEX STRUCTURE - for backward compatibility) ────────
 
 export interface ListeningPart5AnswerOption {
   id: number
@@ -496,7 +551,38 @@ export async function evaluateListeningPart4(
   return data
 }
 
-// ── Part 5 API Functions ──────────────────────────────────────────────────────
+// ── Part 5 API Functions (SIMPLE STRUCTURE) ───────────────────────────────────
+
+export async function getListeningPart5QuestionsSimple(
+  examId?: number
+): Promise<ListeningPart5QuestionsResponseSimple> {
+  if (!examId) {
+    throw new Error("exam_id is required for Listening Part 5")
+  }
+  
+  const params: Record<string, unknown> = {}
+  params._t = Date.now()
+  
+  const { data } = await apiClient.get<ListeningPart5QuestionsResponseSimple>(
+    ENDPOINTS.listening.part5Simple.question(examId),
+    { params }
+  )
+  return data
+}
+
+export async function evaluateListeningPart5Simple(
+  examId: number,
+  questionId: number,
+  payload: ListeningPart5EvaluateRequestSimple
+): Promise<ListeningPart5EvaluateResponseSimple> {
+  const { data } = await apiClient.post<ListeningPart5EvaluateResponseSimple>(
+    ENDPOINTS.listening.part5Simple.evaluate(examId, questionId),
+    payload
+  )
+  return data
+}
+
+// ── Part 5 API Functions (OLD - for backward compatibility) ───────────────────
 
 export async function getListeningPart5Questions(
   examId?: number
